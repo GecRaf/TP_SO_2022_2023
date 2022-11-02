@@ -9,10 +9,7 @@ int main(int argc, char **argv){
 
     char fun[20];
     printf("Deseja testar que funcionalidade? "); 
-    scanf("%s", &fun);
+    scanf("%s", fun);
     printf("\n");
     //puts(fun);
-
-    
-
 }

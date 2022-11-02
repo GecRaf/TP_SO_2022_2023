@@ -1,6 +1,6 @@
-default all;
+#Makefile
 
-all: Frontend.o Backend.o 
+all: Frontend.o Backend.o Promotor.o
 
 Frontend.o: frontend.c
 
@@ -13,3 +13,9 @@ Backend.o: backend.c
 Promotor.o: promotor.c
 
 	gcc promotor.c -o Promotor
+
+clean:
+	rm Frontend
+	rm Backend
+	rm Promotor
+	rm -rf *.o

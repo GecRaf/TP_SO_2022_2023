@@ -13,15 +13,12 @@ int main(int argc, char **argv){
 
     char fun[20];
     printf("Deseja testar que funcionalidade? "); 
-    scanf("%s", &fun);
+    scanf("%s", fun);
     printf("\n");
 
-    if(fun == "comandos")
+    if(strcmp(fun, "comandos") == 0)
     {
         ler_comando();
     }
     //puts(fun);
-
-    
-
 }
