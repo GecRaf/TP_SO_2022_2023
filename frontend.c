@@ -1,7 +1,7 @@
 #include "frontend.h"
 
 
-void ler_comando(){
+void commands(){
 
     char comando[30];
     printf("funcao le comando");
@@ -12,13 +12,13 @@ void ler_comando(){
 int main(int argc, char **argv){
 
     char fun[20];
-    printf("Deseja testar que funcionalidade? "); 
+    printf("Deseja testar que funcionalidade? ");
     scanf("%s", fun);
     printf("\n");
 
     if(strcmp(fun, "comandos") == 0)
     {
-        ler_comando();
+        commands();
     }
     //puts(fun);
 }
