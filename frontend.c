@@ -67,10 +67,35 @@ void frontendCommandReader()
             char itemName[15] = "", category[15] = "", basePriceChar[10] = "", buyNowPriceChar[10] = "", durationChar[10] = "";
             sscanf(arg, "%14s %14s %9s %9s %9[^\n]", itemName, category, basePriceChar, buyNowPriceChar, durationChar);
             int basePrice = atoi(basePriceChar), buyNowPrice = atoi(buyNowPriceChar), duration = atoi(durationChar);
-            if (strcmp(arg, "") == 0 || strcmp(itemName, "") && 0 || strcmp(category, "") == 0 || basePrice == 0 || buyNowPrice == 0 || duration == 0)
+            if (strcmp(arg, "") == 0 )
             {
+                
                 printf("\nInvalid notation for command ' sell '\n");
                 printf("Use the following notation: 'sell <item-name> <category> <base-price> <buy-now-price> <duration>'\n");
+                continue;
+            }
+            else if(strcmp(itemName, "") == 0)
+            {
+                printf("\nInvalid notation for command ' sell ' in <item-name>\n");
+                continue;
+            }
+            else if(strcmp(category, "") == 0)
+            {
+                printf("\nInvalid notation for command ' sell ' in <category>\n");
+                continue;
+            }
+            else if(basePrice == 0 ){
+                 printf("\nInvalid notation for command ' sell '! Base Price must be > 0 \n");
+                continue;
+            }
+            else if(buyNowPrice == 0)
+            {
+                printf("\nInvalid notation for command ' sell '! Buy Now Price must be > 0 \n");
+                continue;
+            }
+            else if(duration == 0)
+            {
+                printf("\nInvalid notation for command ' sell '! Duration must be > 0 \n");
                 continue;
             }
             sell(itemName, category, basePrice, buyNowPrice, duration); // Puts item to sell
