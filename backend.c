@@ -124,20 +124,12 @@ int main(int argc, char **argv)
         printf("\n[!] Error! MAX_PROMOTORS not defined!\n");
         return (0);
     }
-    if (getenv("MAX_ITEMS") == NULL)
-    {
-        printf("\n[!] Error! MAX_ITEMS not defined!\n");
-        return (0);
-    }
 
     char *maxUsersChar = getenv("MAX_USERS");
     int maxUsers = atoi(maxUsersChar);
 
     char *maxPromotorsChar = getenv("MAX_PROMOTORS");
     int maxPromotors = atoi(maxPromotorsChar);
-
-    char *maxItemsChar = getenv("MAX_ITEMS");
-    int maxItems = atoi(maxItemsChar);
 
     backendCommandReader();
 }

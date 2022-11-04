@@ -1,13 +1,28 @@
 #include "frontend.h"
 
+Item* items;
 
-//-----------------TESTE AO GITHUB NO VS CODE--------------------------
-void sell(char itemName[], char category[], int basePrice, int buyNowPrice, int duration)
+int sell(char itemName[], char category[], int basePrice, int buyNowPrice, int duration)
 {
     printf("\nitemName: %s\ncategory: %s\nbasePrice: %d\nbuyNowPrice: %d\nduration: %d\n\n",
            itemName, category, basePrice, buyNowPrice, duration);
-    // return ID; // In case of success
-    // return -1; // In case of insuccess
+
+    int i = 0;
+    while (items[i].id != 0)
+        i++;
+
+    items[i].id = i + 1;
+
+    if(items[i].id != 0){
+        strcpy(items[i].name, itemName);
+        strcpy(items[i].category, category);
+        items[i].basePrice = basePrice;
+        items[i].buyNowPrice = buyNowPrice;
+        
+        return items[i].id; // In case of success
+    }
+    else
+        return -1; // In case of insuccess
     // TODO later change void to int function
 }
 void list() {}
@@ -69,7 +84,6 @@ void frontendCommandReader()
             int basePrice = atoi(basePriceChar), buyNowPrice = atoi(buyNowPriceChar), duration = atoi(durationChar);
             if (strcmp(arg, "") == 0 )
             {
-                
                 printf("\nInvalid notation for command ' sell '\n");
                 printf("Use the following notation: 'sell <item-name> <category> <base-price> <buy-now-price> <duration>'\n");
                 continue;
@@ -98,7 +112,11 @@ void frontendCommandReader()
                 printf("\nInvalid notation for command ' sell '! Duration must be > 0 \n");
                 continue;
             }
-            sell(itemName, category, basePrice, buyNowPrice, duration); // Puts item to sell
+            int success = sell(itemName, category, basePrice, buyNowPrice, duration); // Puts item to sell
+            if(success == -1)
+                printf("\n[!] Error creating new item!\n");
+            else
+                printf("\n[~] New item added successfully!\nID: %d\n\n", success);
             // Should return the ID from the platform or -1 in case of insuccess
         }
         else if (strcmp(cmd, "list") == 0)
@@ -214,13 +232,27 @@ void frontendCommandReader()
 
 int main(int argc, char **argv)
 {
-
     if (argc < 3 || argc >= 4)
     {
         printf("\n[!] Invalid number of arguments\n");
         printf("[~] Use the following notation: '$./frontend <username> <username-password>'\n\n");
         return 0;
     }
+
+    /*int succsess = envioPipe(user, pass);
+    if(success == -1)
+        return 0;*/ //TODO later
+
+    if (getenv("MAX_ITEMS") == NULL)
+    {
+        printf("\n[!] Error! MAX_ITEMS not defined!\n");
+        return (0);
+    }
+
+    char *maxItemsChar = getenv("MAX_ITEMS");
+    int maxItems = atoi(maxItemsChar);
+    
+    items = (Item*)malloc(sizeof(Item)*maxItems);
     // Aqui envia para o backend as credenciais e retorna se são válidas ou não
     frontendCommandReader();
 }

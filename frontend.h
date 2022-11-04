@@ -11,15 +11,11 @@
 #include <pthread.h>
 #include <fcntl.h>
 
-typedef struct item {
+typedef struct{
     int id;
     char name[20];
     char category[20];
-    double base_price;
-    double buy_now_price;
+    int basePrice; // Perguntar se é double, int ou float
+    int buyNowPrice;
+    int duration;
 }Item;
-
-typedef struct user{
-    char username[20];
-    char password[20];
-}User;

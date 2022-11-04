@@ -16,4 +16,11 @@
 
 #define BACKEND_FIFO "/tmp/backend_fifo"
 
+
+typedef struct user{
+    char username[20];
+    char password[20];
+}User;
+
+
 #endif // !BACKHEND_H
