@@ -1,5 +1,7 @@
 #include "frontend.h"
 
+
+//-----------------TESTE AO GITHUB NO VS CODE--------------------------
 void sell(char itemName[], char category[], int basePrice, int buyNowPrice, int duration)
 {
     printf("\nitemName: %s\ncategory: %s\nbasePrice: %d\nbuyNowPrice: %d\nduration: %d\n\n",
