@@ -12,6 +12,7 @@
 #include <time.h>
 #include <dirent.h>
 #include <pthread.h>
+#include <fcntl.h>
 
 #define BACKEND_FIFO "/tmp/backend_fifo"
 

@@ -1,8 +1,15 @@
-#include <string.h>
+#include <stdlib.h>
 #include <stdio.h>
-#include <sys/types.h>
+#include <string.h>
 #include <unistd.h>
-#include <stdbool.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
+#include <time.h>
+#include <dirent.h>
+#include <pthread.h>
+#include <fcntl.h>
 
 typedef struct item {
     int id;
