@@ -4,17 +4,15 @@
 #include <unistd.h>
 #include <stdbool.h>
 
-
-
-
 typedef struct item {
     int id;
-    char nome[20];
-    char categoria[20];
-    double valor_base;
-    double compre_ja;
+    char name[20];
+    char category[20];
+    double base_price;
+    double buy_now_price;
 }Item;
 
 typedef struct user{
-
+    char username[20];
+    char password[20];
 }User;

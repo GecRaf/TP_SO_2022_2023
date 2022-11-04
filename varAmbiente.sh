@@ -1,5 +1,6 @@
 #source varAmbient.sh 
 
-//define as variaveis
-
 export HEARTBEAT=30
+export MAX_USERS=20
+export MAX_PROMOTORS=10
+export MAX_ITEMS=30
