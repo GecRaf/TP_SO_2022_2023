@@ -99,7 +99,6 @@ void backendCommandReader()
 
 void ReadItemsFile()
 {
-    printf("Entrou?");
     FILE *f;
 
     char *maxItemsChar = getenv("MAX_ITEMS");
@@ -107,22 +106,21 @@ void ReadItemsFile()
 
     Item* it = (Item*)malloc(sizeof(Item)*maxItems);
 
-    f= fopen("fitems", "r");
+    f = fopen("fitems.txt", "r");
     if(f==NULL)
     {
-        printf("\nError while opening the file items\n");
-        EXIT_FAILURE;
+        printf("\n[!] Error while opening the file ' items '\n");
+        exit(EXIT_FAILURE);
     }
     else{
-        printf("\nSucess\n");
+        printf("\n[~] Successuflly loaded file ' items '\n");
     }
 
-    int i = 0;
-
-    while(fread(&it[i], sizeof(Item), 1, f))  
-    {
-        printf("\n%d %s %s %d %d %d %s %s\n\n", it->id, it->name, it->category, it->basePrice, it->buyNowPrice, it->duration, it->sellinguser, it->higher);    }
-
+    while(fscanf(f, "%d %s %s %d %d %d %s %s[^\n]", &it->id, it->name, it->category, &it->basePrice, &it->buyNowPrice, &it->duration, it->sellingUser, it->highestBidder) == 8){
+        printf("\n\n%d %s %s %d %d %d %s %s\n\n", it->id, it->name, it->category, it->basePrice, it->buyNowPrice, it->duration, it->sellingUser, it->highestBidder); // Just for testing purposes, remove later
+        ++it;
+    }
+    
     fclose(f);
     
 }
@@ -149,7 +147,7 @@ void ReadUsersFile()
 
     while(fread(&u[i], sizeof(User), 1, f))  
     {
-        printf("\n%s %s %d\n\n", u->username, u->password, u->money);
+        printf("\n%s %s %d\n\n", u->username, u->password, u->balance);
         i++;
     }
 
@@ -195,7 +193,7 @@ int main(int argc, char **argv)
     char *maxPromotorsChar = getenv("MAX_PROMOTORS");
     int maxPromotors = atoi(maxPromotorsChar);
     
-     ReadItemsFile();
-     ReadUsersFile();
-    backendCommandReader();
+    ReadItemsFile();
+    ReadUsersFile();
+    //backendCommandReader();
 }

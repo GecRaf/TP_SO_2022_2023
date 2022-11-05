@@ -18,6 +18,6 @@ typedef struct{
     int basePrice; // Perguntar se é double, int ou float
     int buyNowPrice;
     int duration;
-    char sellinguser[20];
-    char higher[20]; //User do ultimo que fez proposta mais alta
+    char sellingUser[20];
+    char highestBidder[20]; //User do ultimo que fez proposta mais alta
 }Item;

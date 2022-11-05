@@ -20,7 +20,7 @@
 typedef struct user{
     char username[20];
     char password[20];
-    int money;
+    int balance;
 }User;
 
 
