@@ -101,8 +101,11 @@ void ReadItemsFile()
 {
     printf("Entrou?");
     FILE *f;
-   
-    Item it;
+
+    char *maxItemsChar = getenv("MAX_ITEMS");
+    int maxItems = atoi(maxItemsChar);
+
+    Item* it = (Item*)malloc(sizeof(Item)*maxItems);
 
     f= fopen("fitems", "r");
     if(f==NULL)
@@ -114,11 +117,11 @@ void ReadItemsFile()
         printf("\nSucess\n");
     }
 
-    while(fread(&it, sizeof(Item), 1, f))  
+    int i = 0;
+
+    while(fread(&it[i], sizeof(Item), 1, f))  
     {
-        printf("\n%d %s %s %d %d %d %s %s\n\n", it.id, it.name, it.category, it.basePrice, it.buyNowPrice, it.duration, it.sellinguser, it.higher);
-        
-    }
+        printf("\n%d %s %s %d %d %d %s %s\n\n", it->id, it->name, it->category, it->basePrice, it->buyNowPrice, it->duration, it->sellinguser, it->higher);    }
 
     fclose(f);
     
@@ -127,7 +130,10 @@ void ReadUsersFile()
 {
     printf("Entrou?");
     FILE *f;
-    User u;
+    char *maxUsersChar = getenv("MAX_USERS");
+    int maxUsers = atoi(maxUsersChar);
+
+    User* u = (User*)malloc(sizeof(User)*maxUsers);
 
     f= fopen("fusers", "r");
     if(f==NULL)
@@ -139,10 +145,12 @@ void ReadUsersFile()
         printf("\nSucess\n");
     }
 
-    while(fread(&u, sizeof(User), 1, f))  
+    int i = 0;
+
+    while(fread(&u[i], sizeof(User), 1, f))  
     {
-        printf("\n%s %s %d\n\n", u.username, u.password, u.money);
-        
+        printf("\n%s %s %d\n\n", u->username, u->password, u->money);
+        i++;
     }
 
     fclose(f);
@@ -178,9 +186,11 @@ int main(int argc, char **argv)
         printf("\n[!] Error! MAX_PROMOTORS not defined!\n");
         return (0);
     }
-
-    char *maxUsersChar = getenv("MAX_USERS");
-    int maxUsers = atoi(maxUsersChar);
+    if (getenv("MAX_ITEMS") == NULL)
+    {
+        printf("\n[!] Error! MAX_ITEMS not defined!\n");
+        return (0);
+    }
 
     char *maxPromotorsChar = getenv("MAX_PROMOTORS");
     int maxPromotors = atoi(maxPromotorsChar);
