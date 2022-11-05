@@ -97,6 +97,59 @@ void backendCommandReader()
     }
 }
 
+void ReadItemsFile()
+{
+    printf("Entrou?");
+    FILE *f;
+   
+    Item it;
+
+    f= fopen("fitems", "r");
+    if(f==NULL)
+    {
+        printf("\nError while opening the file items\n");
+        EXIT_FAILURE;
+    }
+    else{
+        printf("\nSucess\n");
+    }
+
+    while(fread(&it, sizeof(Item), 1, f))  
+    {
+        printf("\n%d %s %s %d %d %d %s %s\n\n", it.id, it.name, it.category, it.basePrice, it.buyNowPrice, it.duration, it.sellinguser, it.higher);
+        
+    }
+
+    fclose(f);
+    
+}
+void ReadUsersFile()
+{
+    printf("Entrou?");
+    FILE *f;
+    User u;
+
+    f= fopen("fusers", "r");
+    if(f==NULL)
+    {
+        printf("\nError while opening the file items\n");
+        EXIT_FAILURE;
+    }
+    else{
+        printf("\nSucess\n");
+    }
+
+    while(fread(&u, sizeof(User), 1, f))  
+    {
+        printf("\n%s %s %d\n\n", u.username, u.password, u.money);
+        
+    }
+
+    fclose(f);
+    
+}
+
+
 int main(int argc, char **argv)
 {
     char backend_fifo[20];
@@ -111,11 +164,12 @@ int main(int argc, char **argv)
             perror("\n[!] Error creating pipe!\nError ");
             exit(EXIT_FAILURE);
         }
-    } // Not working as supposed, instance controller?
-
+    } // Not working as supposed, instance controller?*/
+   
     // In order for this to work don't forget to compile varAmbiente.sh first! By doing: "source varAmbiente.sh in terminal"
     if (getenv("MAX_USERS") == NULL)
     {
+        
         printf("\n[!] Error! MAX_USERS not defined!\n");
         return (0);
     }
@@ -130,6 +184,8 @@ int main(int argc, char **argv)
 
     char *maxPromotorsChar = getenv("MAX_PROMOTORS");
     int maxPromotors = atoi(maxPromotorsChar);
-
+    
+     ReadItemsFile();
+     ReadUsersFile();
     backendCommandReader();
 }

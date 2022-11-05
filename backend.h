@@ -13,13 +13,14 @@
 #include <dirent.h>
 #include <pthread.h>
 #include <fcntl.h>
-
+#include "frontend.h"
 #define BACKEND_FIFO "/tmp/backend_fifo"
 
 
 typedef struct user{
     char username[20];
     char password[20];
+    int money;
 }User;
 
 
