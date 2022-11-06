@@ -126,33 +126,29 @@ void ReadItemsFile()
 }
 void ReadUsersFile()
 {
-    printf("Entrou?");
     FILE *f;
     char *maxUsersChar = getenv("MAX_USERS");
     int maxUsers = atoi(maxUsersChar);
 
     User* u = (User*)malloc(sizeof(User)*maxUsers);
 
-    f= fopen("fusers", "r");
+    f= fopen("fusers.txt", "r");
     if(f==NULL)
     {
-        printf("\nError while opening the file items\n");
-        EXIT_FAILURE;
+        printf("\n[!] Error while opening the file ' users '\n");
+        exit(EXIT_FAILURE);
     }
     else{
-        printf("\nSucess\n");
+        printf("\n[~] Successuflly loaded file ' items '\n");
     }
 
-    int i = 0;
-
-    while(fread(&u[i], sizeof(User), 1, f))  
+    while(fscanf(f, "%s %s %d[^\n]", u->username, u->password, &u->balance) == 3)  
     {
-        printf("\n%s %s %d\n\n", u->username, u->password, u->balance);
-        i++;
+        printf("\n\n%s %s %d\n\n", u->username, u->password, u->balance); // Just for testing purposes, remove later
+        ++u;
     }
 
     fclose(f);
-    
 }
 
 
