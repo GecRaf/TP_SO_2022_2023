@@ -139,7 +139,7 @@ void ReadUsersFile()
         exit(EXIT_FAILURE);
     }
     else{
-        printf("\n[~] Successuflly loaded file ' items '\n");
+        printf("\n[~] Successuflly loaded file ' users '\n");
     }
 
     while(fscanf(f, "%s %s %d[^\n]", u->username, u->password, &u->balance) == 3)  
@@ -191,5 +191,5 @@ int main(int argc, char **argv)
     
     ReadItemsFile();
     ReadUsersFile();
-    //backendCommandReader();
+    backendCommandReader();
 }

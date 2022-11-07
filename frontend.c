@@ -1,7 +1,8 @@
 #include "frontend.h"
 
 Item* items;
-
+int p[2], r[2];
+int filho;
 int sell(char itemName[], char category[], int basePrice, int buyNowPrice, int duration)
 {
     printf("\nitemName: %s\ncategory: %s\nbasePrice: %d\nbuyNowPrice: %d\nduration: %d\n\n",
@@ -63,7 +64,7 @@ void clear()
 
 void frontendCommandReader()
 {
-    clear();
+   // clear();
     int pid = getpid();
     char command[50], cmd[15], arg[30];
 
@@ -80,15 +81,9 @@ void frontendCommandReader()
         if (strcmp(cmd, "sell") == 0)
         {
             char itemName[15] = "", category[15] = "", basePriceChar[10] = "", buyNowPriceChar[10] = "", durationChar[10] = "";
-            sscanf(arg, "%14s %14s %9s %9s %9[^\n]", itemName, category, basePriceChar, buyNowPriceChar, durationChar);
-            int basePrice = atoi(basePriceChar), buyNowPrice = atoi(buyNowPriceChar), duration = atoi(durationChar);
-            if (strcmp(arg, "") == 0 )
-            {
-                printf("\nInvalid notation for command ' sell '\n");
-                printf("Use the following notation: 'sell <item-name> <category> <base-price> <buy-now-price> <duration>'\n");
-                continue;
-            }
-            else if(strcmp(itemName, "") == 0)
+            if(sscanf(arg, "%14s %14s %9s %9s %9[^\n]", itemName, category, basePriceChar, buyNowPriceChar, durationChar)==5){
+                int basePrice = atoi(basePriceChar), buyNowPrice = atoi(buyNowPriceChar), duration = atoi(durationChar);
+            if(strcmp(itemName, "") == 0)
             {
                 printf("\nInvalid notation for command ' sell ' in <item-name>\n");
                 continue;
@@ -118,6 +113,15 @@ void frontendCommandReader()
             else
                 printf("\n[~] New item added successfully!\nID: %d\n\n", success);
             // Should return the ID from the platform or -1 in case of insuccess
+            }
+            
+            else 
+            {
+                printf("\nInvalid notation for command ' sell '\n");
+                printf("Use the following notation: 'sell <item-name> <category> <base-price> <buy-now-price> <duration>'\n");
+                continue;
+            }
+            
         }
         else if (strcmp(cmd, "list") == 0)
         {
@@ -230,18 +234,59 @@ void frontendCommandReader()
     }
 } 
 
+int envioPipe(char user[20], char pass[20])
+{
+    int estado, num;
+    pipe(p);
+    pipe(r);
+    filho=fork();
+    if(filho==0){
+         close(0); //CLOSE ACESS TO KEYBOARD
+         dup(p[0]); //DUPLICATE P[0] IN FIRST AVAILABLE POSITION
+         close(p[0]);
+         close(p[1]);
+
+         close(1);
+         dup(r[1]);
+         close(r[0]);
+         close(r[1]);
+         execl("Backend", "Backend", NULL);
+    }
+
+    
+    char resp[20];
+    write(p[1], strcat(user, pass), 40);
+    write(p[1], "\n", 1);
+
+    read(r[0], resp, 40);
+
+    printf("\nEnviei: %s\n", strcat(user, pass));
+    printf("\nRecebi: %s\n", resp);
+    return 1;
+}
+
 int main(int argc, char **argv)
 {
+    char user[10], pass[10];
+
+    
     if (argc < 3 || argc >= 4)
     {
         printf("\n[!] Invalid number of arguments\n");
         printf("[~] Use the following notation: '$./frontend <username> <username-password>'\n\n");
         return 0;
     }
+    else{
+        strcpy(user, argv[1]);
+    strcpy(pass, argv[2]);
 
-    /*int succsess = envioPipe(user, pass);
+    printf("Bem vindo user %s com a pass %s", user, pass);
+    }
+    
+
+    int success = envioPipe(user, pass);
     if(success == -1)
-        return 0;*/ //TODO later
+        return 0; //TODO later
 
     if (getenv("MAX_ITEMS") == NULL)
     {
