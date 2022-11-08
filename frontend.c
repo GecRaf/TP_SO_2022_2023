@@ -236,7 +236,7 @@ void frontendCommandReader()
 
 int sendCredentials(char username[], char password[])
 {
-    
+    // Named pipes
 }
 
 void finish(int s){
