@@ -1,6 +1,11 @@
 #include "backend.h"
 
-void users(){}
+int p[2], r[2];
+int filho;
+
+void users(){
+
+}
 void list(){}
 void kick(char username[]){}
 void prom(){}
@@ -160,6 +165,37 @@ void readCredentials(){
     
 }
 
+void envioPipe()
+{
+    int estado, num;
+    pipe(p);
+    pipe(r);
+    filho=fork();
+    if(filho==0){
+         close(0); //CLOSE ACESS TO KEYBOARD
+         dup(p[0]); //DUPLICATE P[0] IN FIRST AVAILABLE POSITION
+         close(p[0]);
+         close(p[1]);
+
+         close(1);
+         dup(r[1]);
+         close(r[0]);
+         close(r[1]);
+         execl("Promotor", "Promotor", NULL);
+    }
+
+    
+    char resp[20];
+    write(p[1], "enviar", 40);
+    write(p[1], "\n", 1);
+
+    //read(r[0], resp, 40);
+
+    printf("\nEnviei: %s\n", "enviar");
+    printf("\nRecebi: %s\n", resp);
+    //return 1;
+}
+
 int main(int argc, char **argv)
 {
     char backend_fifo[20];
@@ -198,7 +234,8 @@ int main(int argc, char **argv)
         printf("\n[!] Error! FITEMS not defined!\n");
         return (0);
     }
-
+   
+    envioPipe();
     readItemsFile();
     readUsersFile();
     readCredentials();

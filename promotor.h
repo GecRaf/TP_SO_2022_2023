@@ -15,6 +15,8 @@
 #include <fcntl.h>
 #include "frontend.h"
 
+
+//enviar ao backend 
 typedef struct promotor{
     char category[20];
     int discount;
