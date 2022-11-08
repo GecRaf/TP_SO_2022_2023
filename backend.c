@@ -97,16 +97,18 @@ void backendCommandReader()
     }
 }
 
-void ReadItemsFile()
+void readItemsFile()
 {
     FILE *f;
 
     char *maxItemsChar = getenv("MAX_ITEMS");
     int maxItems = atoi(maxItemsChar);
 
+    char *itemsFile = getenv("FITEMS");
+
     Item* it = (Item*)malloc(sizeof(Item)*maxItems);
 
-    f = fopen("fitems.txt", "r");
+    f = fopen(itemsFile, "r");
     if(f==NULL)
     {
         printf("\n[!] Error while opening the file ' items '\n");
@@ -124,15 +126,18 @@ void ReadItemsFile()
     fclose(f);
     
 }
-void ReadUsersFile()
+
+void readUsersFile()
 {
     FILE *f;
     char *maxUsersChar = getenv("MAX_USERS");
     int maxUsers = atoi(maxUsersChar);
 
+    char *usersFile = getenv("FUSERS");
+
     User* u = (User*)malloc(sizeof(User)*maxUsers);
 
-    f= fopen("fusers.txt", "r");
+    f= fopen(usersFile, "r");
     if(f==NULL)
     {
         printf("\n[!] Error while opening the file ' users '\n");
@@ -151,6 +156,9 @@ void ReadUsersFile()
     fclose(f);
 }
 
+void readCredentials(){
+    
+}
 
 int main(int argc, char **argv)
 {
@@ -175,21 +183,24 @@ int main(int argc, char **argv)
         printf("\n[!] Error! MAX_USERS not defined!\n");
         return (0);
     }
-    if (getenv("MAX_PROMOTORS") == NULL)
-    {
-        printf("\n[!] Error! MAX_PROMOTORS not defined!\n");
-        return (0);
-    }
     if (getenv("MAX_ITEMS") == NULL)
     {
         printf("\n[!] Error! MAX_ITEMS not defined!\n");
         return (0);
     }
+    if (getenv("FUSERS") == NULL)
+    {
+        printf("\n[!] Error! FUSERS not defined!\n");
+        return (0);
+    }
+    if (getenv("FITEMS") == NULL)
+    {
+        printf("\n[!] Error! FITEMS not defined!\n");
+        return (0);
+    }
 
-    char *maxPromotorsChar = getenv("MAX_PROMOTORS");
-    int maxPromotors = atoi(maxPromotorsChar);
-    
-    ReadItemsFile();
-    ReadUsersFile();
+    readItemsFile();
+    readUsersFile();
+    readCredentials();
     backendCommandReader();
 }

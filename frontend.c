@@ -1,8 +1,8 @@
 #include "frontend.h"
 
 Item* items;
-int p[2], r[2];
-int filho;
+int continua = 1;
+
 int sell(char itemName[], char category[], int basePrice, int buyNowPrice, int duration)
 {
     printf("\nitemName: %s\ncategory: %s\nbasePrice: %d\nbuyNowPrice: %d\nduration: %d\n\n",
@@ -234,41 +234,23 @@ void frontendCommandReader()
     }
 } 
 
-int envioPipe(char user[20], char pass[20])
+int sendCredentials(char username[], char password[])
 {
-    int estado, num;
-    pipe(p);
-    pipe(r);
-    filho=fork();
-    if(filho==0){
-         close(0); //CLOSE ACESS TO KEYBOARD
-         dup(p[0]); //DUPLICATE P[0] IN FIRST AVAILABLE POSITION
-         close(p[0]);
-         close(p[1]);
-
-         close(1);
-         dup(r[1]);
-         close(r[0]);
-         close(r[1]);
-         execl("Backend", "Backend", NULL);
-    }
-
     
-    char resp[20];
-    write(p[1], strcat(user, pass), 40);
-    write(p[1], "\n", 1);
+}
 
-    read(r[0], resp, 40);
-
-    printf("\nEnviei: %s\n", strcat(user, pass));
-    printf("\nRecebi: %s\n", resp);
-    return 1;
+void finish(int s){
+    continua = 0;
 }
 
 int main(int argc, char **argv)
 {
-    char user[10], pass[10];
+    int fd;
+    char username[20], password[20];
 
+    struct sigaction act;
+    act.sa_handler = finish;
+    sigaction(SIGINT, &act, NULL);
     
     if (argc < 3 || argc >= 4)
     {
@@ -276,15 +258,11 @@ int main(int argc, char **argv)
         printf("[~] Use the following notation: '$./frontend <username> <username-password>'\n\n");
         return 0;
     }
-    else{
-        strcpy(user, argv[1]);
-    strcpy(pass, argv[2]);
 
-    printf("Bem vindo user %s com a pass %s", user, pass);
-    }
-    
+    strcpy(username, argv[1]);
+    strcpy(password, argv[2]);
 
-    int success = envioPipe(user, pass);
+    int success = sendCredentials(username, password);
     if(success == -1)
         return 0; //TODO later
 

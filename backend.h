@@ -21,7 +21,14 @@ typedef struct user{
     char username[20];
     char password[20];
     int balance;
+    pthread_mutex_t mutex;
 }User;
+
+typedef struct promotor{
+    char category[20];
+    int discount;
+    int duration;
+}Promotor;
 
 
 #endif // !BACKHEND_H
