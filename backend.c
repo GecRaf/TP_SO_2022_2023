@@ -1,11 +1,6 @@
 #include "backend.h"
 
-int p[2], r[2];
-int filho;
-
-void users(){
-
-}
+void users(){}
 void list(){}
 void kick(char username[]){}
 void prom(){}
@@ -13,13 +8,14 @@ void reprom(){}
 void cancelPromotor(){}
 void quit(){
     printf("\n[!] Closing...\n\n");
+    unlink(BACKEND_FIFO);
+    unlink(BACKEND_FIFO_FRONTEND);
     sleep(1);
     exit(EXIT_SUCCESS);
 }
 void clear(){
     system("clear");
 }
-
 void backendCommandReader()
 {
     clear();
@@ -101,7 +97,6 @@ void backendCommandReader()
         }
     }
 }
-
 void readItemsFile()
 {
     FILE *f;
@@ -131,7 +126,6 @@ void readItemsFile()
     fclose(f);
     
 }
-
 void readUsersFile()
 {
     FILE *f;
@@ -160,58 +154,42 @@ void readUsersFile()
 
     fclose(f);
 }
-
-void readCredentials(){
-    
+void readCredentials(){}
+void promotorComms()
+{
+    int pipeBP[2], pipePB[2];
+    int estado, num;
+    pipe(pipeBP);
+    pipe(pipePB);
+    int pid = fork();
+    if(pid == 0){
+        close(STDIN_FILENO); // Close stdin
+        close(STDOUT_FILENO); // Close stdout
+        dup(pipeBP[0]); // Duplicate pipeBP[0] to read from pipe BackEnd -> Promotor
+        dup(pipePB[1]); // Duplicate pipePB[1] to write to pipe Promotor -> BackEnd
+        execl("./Promotor", "./Promotor", (char*)NULL); // Add eventual arguments
+    }else{
+        close(pipeBP[0]);
+        close(pipePB[1]);
+    }
 }
 
-void envioPipe()
-{
-    int estado, num;
-    pipe(p);
-    pipe(r);
-    filho=fork();
-    if(filho==0){
-         close(0); //CLOSE ACESS TO KEYBOARD
-         dup(p[0]); //DUPLICATE P[0] IN FIRST AVAILABLE POSITION
-         close(p[0]);
-         close(p[1]);
-
-         close(1);
-         dup(r[1]);
-         close(r[0]);
-         close(r[1]);
-         execl("Promotor", "Promotor", NULL);
+int instanceController(){
+    int backend_fd = open(BACKEND_FIFO, O_RDONLY | O_NONBLOCK);
+    close(backend_fd);
+    if(backend_fd == -1){
+        return 1;
     }
-
-    
-    char resp[20];
-    write(p[1], "enviar", 40);
-    write(p[1], "\n", 1);
-
-    //read(r[0], resp, 40);
-
-    printf("\nEnviei: %s\n", "enviar");
-    printf("\nRecebi: %s\n", resp);
-    //return 1;
+    return 0;
 }
 
 int main(int argc, char **argv)
 {
-    char backend_fifo[20];
-    int backend_fd;
-    pthread_t id;
-    int pid = getpid();
+    if(!instanceController()){
+        printf("\n[!] Another instance of the backend is already running\n");
+        return 0;
+    }// Checks if there is already an instance of the backend running
 
-    if (access(BACKEND_FIFO, F_OK) != 0)
-    {
-        if (mkfifo(BACKEND_FIFO, S_IRUSR | S_IWUSR) == -1)
-        {
-            perror("\n[!] Error creating pipe!\nError ");
-            exit(EXIT_FAILURE);
-        }
-    } // Not working as supposed, instance controller?*/
-   
     // In order for this to work don't forget to compile varAmbiente.sh first! By doing: "source varAmbiente.sh in terminal"
     if (getenv("MAX_USERS") == NULL)
     {
@@ -234,10 +212,22 @@ int main(int argc, char **argv)
         printf("\n[!] Error! FITEMS not defined!\n");
         return (0);
     }
+
+    // FIFO creation
+    if(mkfifo(BACKEND_FIFO, 0666) == -1){
+        printf("\n[!] Error while creating the backend FIFO\n");
+        return 0;
+    }
+    if(mkfifo(BACKEND_FIFO_FRONTEND, 0666) == -1){
+        printf("\n[!] Error while creating the backend_frontend FIFO\n");
+        return 0;
+    }
    
-    envioPipe();
-    readItemsFile();
+    promotorComms(); // Needs to integrate a thread
+    readItemsFile(); 
     readUsersFile();
-    readCredentials();
-    backendCommandReader();
+    readCredentials(); // Needs to integrate a thread
+    backendCommandReader(); // Needs to integrate a thread
+
+    return 0;
 }

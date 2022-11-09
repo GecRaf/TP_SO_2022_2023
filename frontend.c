@@ -1,7 +1,7 @@
 #include "frontend.h"
 
+char FRONTEND_FINAL_FIFO[50];
 Item* items;
-int continua = 1;
 
 int sell(char itemName[], char category[], int basePrice, int buyNowPrice, int duration)
 {
@@ -54,6 +54,7 @@ void add(int value)
 }
 void quit() {
     printf("\n[!] Exiting...\n\n");
+    unlink(FRONTEND_FINAL_FIFO);
     sleep(1);
     exit(EXIT_SUCCESS);
 }
@@ -236,21 +237,27 @@ void frontendCommandReader()
 
 int sendCredentials(char username[], char password[])
 {
-    
+    return 0;
 }
 
-void finish(int s){
-    continua = 0;
+int backendOn(){
+    int backend_fd = open(BACKEND_FIFO, O_RDONLY | O_NONBLOCK);
+    close(backend_fd);
+    if(backend_fd == -1){
+        return 1;
+    }
+    return 0;
 }
 
 int main(int argc, char **argv)
 {
-    int fd;
-    char username[20], password[20];
+    int fd, maxItems;
+    char username[20], password[20], *maxItemsChar;
 
-    struct sigaction act;
-    act.sa_handler = finish;
-    sigaction(SIGINT, &act, NULL);
+    if(backendOn()){
+        printf("\n[!] Backend program isn't running yet!\n");
+        return 0;
+    }
     
     if (argc < 3 || argc >= 4)
     {
@@ -259,23 +266,27 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    strcpy(username, argv[1]);
-    strcpy(password, argv[2]);
-
-    int success = sendCredentials(username, password);
-    if(success == -1)
-        return 0; //TODO later
-
     if (getenv("MAX_ITEMS") == NULL)
     {
         printf("\n[!] Error! MAX_ITEMS not defined!\n");
         return (0);
     }
-
-    char *maxItemsChar = getenv("MAX_ITEMS");
-    int maxItems = atoi(maxItemsChar);
-    
+    maxItemsChar = getenv("MAX_ITEMS");
+    maxItems = atoi(maxItemsChar);
     items = (Item*)malloc(sizeof(Item)*maxItems);
+
+    sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, getpid());
+    if(mkfifo(FRONTEND_FINAL_FIFO, 0666) == -1){
+        printf("\n[!] Error creating frontend fifo!\n");
+        return 0;
+    }
+
     // Aqui envia para o backend as credenciais e retorna se são válidas ou não
+    strcpy(username, argv[1]);
+    strcpy(password, argv[2]);
+    int success = sendCredentials(username, password);
+    if(success == -1)
+        return 0; //TODO later
+    
     frontendCommandReader();
 }

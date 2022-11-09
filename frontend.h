@@ -11,6 +11,10 @@
 #include <pthread.h>
 #include <fcntl.h>
 
+#define BACKEND_FIFO "backend_fifo"
+#define BACKEND_FIFO_FRONTEND "backend_fifo_frontend"
+#define FRONTEND_FIFO "frontend_fifo[%d]"
+
 typedef struct{
     int id;
     char name[20];

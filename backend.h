@@ -14,14 +14,15 @@
 #include <pthread.h>
 #include <fcntl.h>
 #include "frontend.h"
-#define BACKEND_FIFO "/tmp/backend_fifo"
 
+#define BACKEND_FIFO "backend_fifo"
+#define BACKEND_FIFO_FRONTEND "backend_fifo_frontend"
+#define FRONTEND_FIFO "frontend_fifo[%d]"
 
 typedef struct user{
     char username[20];
     char password[20];
     int balance;
-    pthread_mutex_t mutex;
 }User;
 
 typedef struct promotor{
@@ -29,6 +30,5 @@ typedef struct promotor{
     int discount;
     int duration;
 }Promotor;
-
 
 #endif // !BACKHEND_H
