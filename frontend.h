@@ -19,9 +19,9 @@ typedef struct{
     int id;
     char name[20];
     char category[20];
-    int basePrice; // Perguntar se é double, int ou float
+    int basePrice; 
     int buyNowPrice;
     int duration;
     char sellingUser[20];
-    char highestBidder[20]; //User do ultimo que fez proposta mais alta
+    char highestBidder[20]; 
 }Item;

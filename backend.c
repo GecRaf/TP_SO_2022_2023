@@ -1,5 +1,5 @@
 #include "backend.h"
-
+#include "users_lib.h"
 void users(){}
 void list(){}
 void kick(char username[]){}
@@ -167,7 +167,7 @@ void promotorComms()
         close(STDOUT_FILENO); // Close stdout
         dup(pipeBP[0]); // Duplicate pipeBP[0] to read from pipe BackEnd -> Promotor
         dup(pipePB[1]); // Duplicate pipePB[1] to write to pipe Promotor -> BackEnd
-        execl("./Promotor", "./Promotor", (char*)NULL); // Add eventual arguments
+        execl("./promotor_oficial", "./promotor_oficial", (char*)NULL); // Add eventual arguments
     }else{
         close(pipeBP[0]);
         close(pipePB[1]);
