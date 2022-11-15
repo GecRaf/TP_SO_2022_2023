@@ -6,10 +6,12 @@ void kick(char username[]){}
 void prom(){}
 void reprom(){}
 void cancelPromotor(){}
+
 void quit(){
     printf("\n[!] Closing...\n\n");
     unlink(BACKEND_FIFO);
     unlink(BACKEND_FIFO_FRONTEND);
+    killpromotor();
     sleep(1);
     exit(EXIT_SUCCESS);
 }
@@ -172,6 +174,11 @@ void promotorComms()
         close(pipeBP[0]);
         close(pipePB[1]);
     }
+}
+
+void killpromotor(){
+    close(pipePB[0]);
+    kill(filho, SIGUSR2); 
 }
 
 int instanceController(){
