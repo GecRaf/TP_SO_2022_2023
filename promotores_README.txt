@@ -1,5 +1,8 @@
 Acerca
 ------
+- Atualização
+  . versões glibc 2.28, 2.31, 2.35 (linux_x64)
+  . Mac/Intel e Mac/M1 unificados num único ficheiro "mac"
 - São disponibilizados os executáveis de dois promotores que serão usados na avaliação: promotor_oficial e black_friday
 - São disponibilizados para 3 plataformas/arquitecturas
 - Os promotores emitem promoções com periodicidade que vai de algumas dezenas de segundos até pouco mais de um minuto em algumas categorias pre-determinadas
