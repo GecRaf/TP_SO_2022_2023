@@ -1,17 +1,88 @@
 #include "backend.h"
 #include "users_lib.h"
-void users(){}
-void list(){}
-void kick(char username[]){}
-void prom(){}
-void reprom(){}
-void cancelPromotor(){}
 
+int pipeBP[2], pipePB[2];
+int threadCounter = 0;
+
+void listUsers() {
+    FILE *f;
+
+    char *usersFile = getenv("FUSERS");
+    if (loadUsersFile(usersFile) == -1)
+    {
+        printf("\n[!] Error while loading users file\n");
+        exit(EXIT_FAILURE);
+    }
+    else
+    {
+        printf("\n[~] Successuflly loaded file ' users '\n");
+        printf("\n[~] Successuflly read %d users\n", loadUsersFile(usersFile));
+    }
+    // Each time this function is called the users loose 1 balance
+    int maxUsers = atoi(getenv("MAX_USERS"));
+
+    User *usr = (User *)malloc(sizeof(User) * maxUsers);
+
+    f = fopen(usersFile, "r");
+    if (f == NULL)
+    {
+        printf("\n[!] Error while opening file ' users '\n");
+        exit(EXIT_FAILURE);
+    }
+    
+    while(fscanf(f, "%s %s %d", usr->username, usr->password, &usr->balance) == 3)
+    {
+        //printf("\n\n%s %s %d", usr->username, usr->password, usr->balance); // Testing
+        updateUserBalance(usr->username, usr->balance - 1);
+        ++usr;
+    }
+    saveUsersFile(usersFile);
+    fclose(f);
+}
+void list() {}
+void kick(char username[]) {}
+void prom() {}
+void reprom() {
+    // Retry later...
+    /*char promotor;
+    FILE *f = fopen(promotersFile, "r");
+    if (f == NULL)
+    {
+        printf("\n[!] Error while opening the file ' promoters '\n");
+        exit(EXIT_FAILURE);
+    }
+    else
+    {
+        printf("\n[~] Successuflly loaded file ' promoters '\n");
+    }
+
+    while (fscanf(f, "%s[^\n]", promotersFile) == 1)
+    {
+        if(threadCounter < MAX_PROMOTORS)
+        {
+            
+            ++threadCounter;
+        }
+        else
+        {
+            printf("\n[!] Maximum number of promoters reached\n");
+            break;
+        }
+    }*/
+}
+void cancelPromotor() {}
+void quitPromotor()
+{
+    close(pipePB[0]);
+    //pthread_join(thread, NULL);
+    // kill(pid, SIGUSR2); // Not understood
+}
 void quit(){
+    int i = 0;
     printf("\n[!] Closing...\n\n");
     unlink(BACKEND_FIFO);
     unlink(BACKEND_FIFO_FRONTEND);
-    killpromotor();
+    quitPromotor();
     sleep(1);
     exit(EXIT_SUCCESS);
 }
@@ -38,11 +109,11 @@ void backendCommandReader()
 
         if (strcmp(cmd, "users") == 0)
         {
-            users(); //Lists users using the platform ATM
+            listUsers(); // Lists users using the platform ATM
         }
         else if (strcmp(cmd, "list") == 0)
         {
-            list(); //Lists available items
+            list(); // Lists available items
         }
         else if (strcmp(cmd, "kick") == 0)
         {
@@ -53,15 +124,15 @@ void backendCommandReader()
                 continue;
             }
             kick(arg); // Kicks certain user by the username stored in "arg"
-            *arg = 0; // Clears arg char array
+            *arg = 0;  // Clears arg char array
         }
         else if (strcmp(cmd, "prom") == 0)
         {
-            prom(); //Lists active promotors
+            prom(); // Lists active promotors
         }
         else if (strcmp(cmd, "reprom") == 0)
         {
-            reprom(); //Refresh active promotors
+            reprom(); // Refresh active promotors
             // Reads the promotors file again, removes no longer present promotors and adds new ones
         }
         else if (strcmp(cmd, "cancel") == 0)
@@ -82,7 +153,8 @@ void backendCommandReader()
         {
             clear();
         }
-        else if (strcmp(cmd, "help") == 0){
+        else if (strcmp(cmd, "help") == 0)
+        {
             printf("\t\n[!] Available commands:\n");
             printf("[~] users || Lists users using the platform\n");
             printf("[~] list || Lists available items\n");
@@ -108,99 +180,100 @@ void readItemsFile()
 
     char *itemsFile = getenv("FITEMS");
 
-    Item* it = (Item*)malloc(sizeof(Item)*maxItems);
+    Item *it = (Item *)malloc(sizeof(Item) * maxItems);
 
     f = fopen(itemsFile, "r");
-    if(f==NULL)
+    if (f == NULL)
     {
         printf("\n[!] Error while opening the file ' items '\n");
         exit(EXIT_FAILURE);
     }
-    else{
+    else
+    {
         printf("\n[~] Successuflly loaded file ' items '\n");
     }
 
-    while(fscanf(f, "%d %s %s %d %d %d %s %s[^\n]", &it->id, it->name, it->category, &it->basePrice, &it->buyNowPrice, &it->duration, it->sellingUser, it->highestBidder) == 8){
-        printf("\n\n%d %s %s %d %d %d %s %s\n\n", it->id, it->name, it->category, it->basePrice, it->buyNowPrice, it->duration, it->sellingUser, it->highestBidder); // Just for testing purposes, remove later
+    while (fscanf(f, "%d %s %s %d %d %d %s %s[^\n]", &it->id, it->name, it->category, &it->basePrice, &it->buyNowPrice, &it->duration, it->sellingUser, it->highestBidder) == 8)
+    {
+        // printf("\n\n%d %s %s %d %d %d %s %s\n\n", it->id, it->name, it->category, it->basePrice, it->buyNowPrice, it->duration, it->sellingUser, it->highestBidder); // Testing
         ++it;
     }
-    
-    fclose(f);
-    
-}
-void readUsersFile()
-{
-    FILE *f;
-    char *maxUsersChar = getenv("MAX_USERS");
-    int maxUsers = atoi(maxUsersChar);
-
-    char *usersFile = getenv("FUSERS");
-
-    User* u = (User*)malloc(sizeof(User)*maxUsers);
-
-    f= fopen(usersFile, "r");
-    if(f==NULL)
-    {
-        printf("\n[!] Error while opening the file ' users '\n");
-        exit(EXIT_FAILURE);
-    }
-    else{
-        printf("\n[~] Successuflly loaded file ' users '\n");
-    }
-
-    while(fscanf(f, "%s %s %d[^\n]", u->username, u->password, &u->balance) == 3)  
-    {
-        printf("\n\n%s %s %d\n\n", u->username, u->password, u->balance); // Just for testing purposes, remove later
-        ++u;
-    }
 
     fclose(f);
 }
-void readCredentials(){}
-void promotorComms()
+void *promotorComms()
 {
-    int pipeBP[2], pipePB[2];
     int estado, num;
     pipe(pipeBP);
     pipe(pipePB);
     int pid = fork();
-    if(pid == 0){
-        close(STDIN_FILENO); // Close stdin
-        close(STDOUT_FILENO); // Close stdout
-        dup(pipeBP[0]); // Duplicate pipeBP[0] to read from pipe BackEnd -> Promotor
-        dup(pipePB[1]); // Duplicate pipePB[1] to write to pipe Promotor -> BackEnd
-        execl("./promotor_oficial", "./promotor_oficial", (char*)NULL); // Add eventual arguments
-    }else{
-        close(pipeBP[0]);
-        close(pipePB[1]);
+
+    if (pid == 0)
+    {
+        close(0);                                                        // Close stdin
+        dup(pipeBP[0]);                                                  // Duplicate pipeBP[0] to read from pipe BackEnd -> Promotor
+        close(pipeBP[0]);                                                // Close pipeBP[0]
+        close(pipeBP[1]);                                                // Close pipeBP[1]
+        close(1);                                                        // Close stdout
+        dup(pipePB[1]);                                                  // Duplicate pipePB[1] to write to pipe Promotor -> BackEnd
+        close(pipePB[0]);                                                // Close pipePB[0]
+        close(pipePB[1]);                                                // Close pipePB[1]
+        if (execl("promotor_oficial", "promotor_oficial", NULL) == -1) // Add eventual arguments
+        {
+            printf("\n[!] Error while executing ' promotor_oficial '\n");
+            exit(EXIT_FAILURE);
+        }
     }
+    else
+    {
+        int flag = 1;
+        int maxPromotors = atoi(getenv("MAX_PROMOTORS"));
+        Promotor *pr = (Promotor *)malloc(sizeof(Promotor) * maxPromotors);
+        while (flag) // Review
+        {
+            close(pipeBP[0]); // Close pipeBP[0]
+            close(pipePB[1]); // Close pipePB[1]
+            char promotorMSG[50];
+            int tam = read(pipePB[0], promotorMSG, sizeof(promotorMSG));
+            if (tam == -1)
+            {
+                printf("\n[!] Error while reading from pipe\n");
+                exit(EXIT_FAILURE);
+                flag = 0;
+            }
+            promotorMSG[tam] = '\0';
+            printf("\n\n[~] Promotor message: %s\n", promotorMSG);
+            // scanf(promotorMSG, "%s %d %d[^\n]", pr->category, &pr->discount, &pr->duration);
+            // printf("\n\n%s %d %d\n\n", pr->category, pr->discount, pr->duration); // Just for testing purposes, remove later
+            //++pr;
+        }
+    }
+    exit(EXIT_SUCCESS);
 }
-
-void killpromotor(){
-    close(pipePB[0]);
-    kill(filho, SIGUSR2); 
-}
-
-int instanceController(){
+int instanceController()
+{
     int backend_fd = open(BACKEND_FIFO, O_RDONLY | O_NONBLOCK);
     close(backend_fd);
-    if(backend_fd == -1){
+    if (backend_fd == -1)
+    {
         return 1;
     }
     return 0;
 }
-
 int main(int argc, char **argv)
 {
-    if(!instanceController()){
+    clear();
+    printf("\n\nbackend @ SOBAY\n\n");
+    if (!instanceController())
+    {
         printf("\n[!] Another instance of the backend is already running\n");
         return 0;
-    }// Checks if there is already an instance of the backend running
+    } // Checks if there is already an instance of the backend running
 
     // In order for this to work don't forget to compile varAmbiente.sh first! By doing: "source varAmbiente.sh in terminal"
     if (getenv("MAX_USERS") == NULL)
     {
-        
+
         printf("\n[!] Error! MAX_USERS not defined!\n");
         return (0);
     }
@@ -219,22 +292,41 @@ int main(int argc, char **argv)
         printf("\n[!] Error! FITEMS not defined!\n");
         return (0);
     }
+    if (getenv("MAX_PROMOTORS") == NULL)
+    {
+        printf("\n[!] Error! MAX_PROMOTORS not defined!\n");
+        return (0);
+    }
 
     // FIFO creation
-    if(mkfifo(BACKEND_FIFO, 0666) == -1){
+    if (mkfifo(BACKEND_FIFO, 0666) == -1)
+    {
         printf("\n[!] Error while creating the backend FIFO\n");
         return 0;
     }
-    if(mkfifo(BACKEND_FIFO_FRONTEND, 0666) == -1){
+    if (mkfifo(BACKEND_FIFO_FRONTEND, 0666) == -1)
+    {
         printf("\n[!] Error while creating the backend_frontend FIFO\n");
         return 0;
     }
-   
-    promotorComms(); // Needs to integrate a thread
-    readItemsFile(); 
-    readUsersFile();
-    readCredentials(); // Needs to integrate a thread
-    backendCommandReader(); // Needs to integrate a thread
 
+    readItemsFile();
+
+    int MAX_PROMOTORS = atoi(getenv("MAX_PROMOTORS"));
+    pthread_t threadPromotor[threadCounter];
+    char *promotersFile = getenv("FPROMOTERS");
+
+    if (pthread_create(&threadPromotor[threadCounter], NULL, promotorComms, NULL) != 0)
+            perror("Erro na criação da thread");
+    
+    sleep(3);
+    backendCommandReader(); // Needs to integrate a thread
+    while(threadCounter != 0)
+    {
+        pthread_join(threadPromotor[threadCounter], NULL);
+        --threadCounter;
+    }
+    unlink(BACKEND_FIFO);
+    unlink(BACKEND_FIFO_FRONTEND);
     return 0;
 }

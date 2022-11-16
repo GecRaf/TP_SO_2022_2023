@@ -62,7 +62,6 @@ void clear()
 {
     system("clear");
 }
-
 void frontendCommandReader()
 {
    // clear();
@@ -234,12 +233,10 @@ void frontendCommandReader()
         }
     }
 } 
-
 int sendCredentials(char username[], char password[])
 {
     return 0;
 }
-
 int backendOn(){
     int backend_fd = open(BACKEND_FIFO, O_RDONLY | O_NONBLOCK);
     close(backend_fd);

@@ -1,19 +1,20 @@
 #Makefile
 
-all: Frontend.o Backend.o 
+# Compile all
 
-Frontend.o: frontend.c
+all: Frontend Backend
 
-	gcc frontend.c -o Frontend
+Frontend: frontend.c
+	gcc -c frontend.c -o Frontend
 
-Backend.o: backend.c
+Backend: backend.c
+	gcc -c backend.c -pthread
+	gcc -o Backend backend.o users_lib.o
 
-	gcc backend.c -o Backend
-
-
-
-clean:
+Clean:
 	rm Frontend
 	rm Backend
-	rm Promotor
-	rm -rf *.o
+	rm backend.o
+
+
+
