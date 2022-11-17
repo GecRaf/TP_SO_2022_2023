@@ -74,6 +74,7 @@ void cancelPromotor() {}
 void quitPromotor()
 {
     close(pipePB[0]);
+    //pthread_exit((void*) NULL);
     //pthread_join(thread, NULL);
     // kill(pid, SIGUSR2); // Not understood
 }
@@ -201,7 +202,7 @@ void readItemsFile()
 
     fclose(f);
 }
-void *promotorComms()
+void *promotorComms(void *vargp)
 {
     int estado, num;
     pipe(pipeBP);
@@ -218,7 +219,7 @@ void *promotorComms()
         dup(pipePB[1]);                                                  // Duplicate pipePB[1] to write to pipe Promotor -> BackEnd
         close(pipePB[0]);                                                // Close pipePB[0]
         close(pipePB[1]);                                                // Close pipePB[1]
-        if (execl("promotor_oficial", "promotor_oficial", NULL) == -1) // Add eventual arguments
+        if (execl("txt/promotor_oficial", "txt/promotor_oficial", NULL) == -1)
         {
             printf("\n[!] Error while executing ' promotor_oficial '\n");
             exit(EXIT_FAILURE);
@@ -248,6 +249,7 @@ void *promotorComms()
             //++pr;
         }
     }
+    pthread_exit((void*) NULL);
     exit(EXIT_SUCCESS);
 }
 int instanceController()
@@ -326,6 +328,7 @@ int main(int argc, char **argv)
         pthread_join(threadPromotor[threadCounter], NULL);
         --threadCounter;
     }
+    pthread_exit((void*) NULL);
     unlink(BACKEND_FIFO);
     unlink(BACKEND_FIFO_FRONTEND);
     return 0;
