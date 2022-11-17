@@ -64,7 +64,7 @@ void clear()
 }
 void frontendCommandReader()
 {
-   // clear();
+    clear();
     int pid = getpid();
     char command[50], cmd[15], arg[30];
 

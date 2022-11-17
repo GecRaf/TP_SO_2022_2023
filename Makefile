@@ -7,7 +7,7 @@
 all: Frontend Backend
 
 Frontend: frontend.c
-	gcc -c frontend.c -o Frontend
+	gcc -pthread -o Frontend frontend.c
 
 Backend: backend.c
 	gcc -c backend.c -pthread
