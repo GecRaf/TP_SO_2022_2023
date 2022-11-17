@@ -272,14 +272,12 @@ void *promotorComms(void *vargp)
             close(pipePB[1]); // Close pipePB[1]
             char promotorMSG[50];
             int tam = read(pipePB[0], promotorMSG, sizeof(promotorMSG));
-            if (tam == -1)
+            if (tam > 0)
             {
-                printf("\n[!] Error while reading from pipe\n");
-                exit(EXIT_FAILURE);
-                flag = 0;
+                promotorMSG[tam-1] = '\0';
+                printf("\n\n[~] Promotor message: %s\n", promotorMSG);
             }
-            promotorMSG[tam] = '\0';
-            printf("\n\n[~] Promotor message: %s\n", promotorMSG);
+            if(tam == -1){flag = 0;}
             // scanf(promotorMSG, "%s %d %d[^\n]", pr->category, &pr->discount, &pr->duration);
             // printf("\n\n%s %d %d\n\n", pr->category, pr->discount, pr->duration); // Just for testing purposes, remove later
             //++pr;
@@ -297,6 +295,17 @@ int instanceController()
         return 1;
     }
     return 0;
+}
+void frontendCommns(){
+    /*char mensagem[100];
+    int size = read(BACKEND_FIFO_FRONTEND, &mensagem, sizeof(mensagem));
+    if (size == -1)
+    {
+        printf("\n[!] Error while reading from pipe\n");
+        exit(EXIT_FAILURE);
+    }
+    mensagem[size] = '\0';
+    printf("\n\n[~] Message from backend: %s\n", mensagem);*/
 }
 int main(int argc, char **argv)
 {
