@@ -20,7 +20,7 @@ Clean:
 
 FifoCleaning:
 	rm backend_fifo
-	rm backend_frontend_fifo
+	rm backend_fifo_frontend
 
 
 

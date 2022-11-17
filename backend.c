@@ -110,10 +110,22 @@ void backendCommandReader()
 
         if (strcmp(cmd, "users") == 0)
         {
+            if (!(strcmp(arg, "") == 0))
+            {
+                printf("\n[!] Invalid notation for command ' users '\n");
+                printf("[!] No arguments needed\n");
+                continue;
+            }
             listUsers(); // Lists users using the platform ATM
         }
         else if (strcmp(cmd, "list") == 0)
         {
+            if (!(strcmp(arg, "") == 0))
+            {
+                printf("\n[!] Invalid notation for command ' list '\n");
+                printf("[!] No arguments needed\n");
+                continue;
+            }
             list(); // Lists available items
         }
         else if (strcmp(cmd, "kick") == 0)
@@ -129,10 +141,22 @@ void backendCommandReader()
         }
         else if (strcmp(cmd, "prom") == 0)
         {
+            if (!(strcmp(arg, "") == 0))
+            {
+                printf("\n[!] Invalid notation for command ' prom '\n");
+                printf("[!] No arguments needed\n");
+                continue;
+            }
             prom(); // Lists active promotors
         }
         else if (strcmp(cmd, "reprom") == 0)
         {
+            if (!(strcmp(arg, "") == 0))
+            {
+                printf("\n[!] Invalid notation for command ' reprom '\n");
+                printf("[!] No arguments needed\n");
+                continue;
+            }
             reprom(); // Refresh active promotors
             // Reads the promotors file again, removes no longer present promotors and adds new ones
         }
@@ -148,10 +172,22 @@ void backendCommandReader()
         }
         else if (strcmp(cmd, "close") == 0)
         {
+            if (!(strcmp(arg, "") == 0))
+            {
+                printf("\n[!] Invalid notation for command ' close '\n");
+                printf("[!] No arguments needed\n");
+                continue;
+            }
             quit(); // Needs to assure closing of possible open pipes and threads
         }
         else if (strcmp(cmd, "clear") == 0)
         {
+            if (!(strcmp(arg, "") == 0))
+            {
+                printf("\n[!] Invalid notation for command ' clear '\n");
+                printf("[!] No arguments needed\n");
+                continue;
+            }
             clear();
         }
         else if (strcmp(cmd, "help") == 0)
