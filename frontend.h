@@ -25,3 +25,9 @@ typedef struct{
     char sellingUser[20];
     char highestBidder[20]; 
 }Item;
+
+typedef struct{
+    char username[20];
+    char password[20];
+    int balance;
+}usr;

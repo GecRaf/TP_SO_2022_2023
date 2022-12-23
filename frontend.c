@@ -1,6 +1,5 @@
-#include "frontend.h"
+#include "utils.h"
 
-char FRONTEND_FINAL_FIFO[50];
 Item* items;
 
 int sell(char itemName[], char category[], int basePrice, int buyNowPrice, int duration)
@@ -233,10 +232,6 @@ void frontendCommandReader()
         }
     }
 } 
-int sendCredentials(char username[], char password[])
-{
-    return 0;
-}
 int backendOn(){
     int backend_fd = open(BACKEND_FIFO, O_RDONLY | O_NONBLOCK);
     close(backend_fd);
@@ -248,8 +243,9 @@ int backendOn(){
 
 int main(int argc, char **argv)
 {
-    int fd, maxItems;
-    char username[20], password[20], *maxItemsChar;
+    int maxItems;
+    char *maxItemsChar;
+    User user;
 
     if(backendOn()){
         printf("\n[!] Backend program isn't running yet!\n");
@@ -279,11 +275,54 @@ int main(int argc, char **argv)
     }
 
     // Aqui envia para o backend as credenciais e retorna se são válidas ou não
-    strcpy(username, argv[1]);
-    strcpy(password, argv[2]);
-    int success = sendCredentials(username, password);
-    if(success == -1)
-        return 0; //TODO later
+    strcpy(user.username, argv[1]);
+    strcpy(user.password, argv[2]);
+    user.PID = getpid();
+
+    int fd = open(BACKEND_FIFO, O_WRONLY);
+    if (fd == -1)
+    {
+        printf("\n[!] Error opening frontend fifo\n");
+        return 1;
+    }
+    int size = write(fd, &user, sizeof(user));
+    if(size == -1){
+        printf("\n[!] Error writing to backend fifo\n");
+        return 1;
+    }
+    close(fd);
     
+    // Receives response from backend (1 = Logged in, -1 = Wrong password, 0 = User doesn't exist)
+    int fd2 = open(FRONTEND_FINAL_FIFO, O_RDONLY);
+    if (fd2 == -1)
+    {
+        printf("\n[!] Error opening backend fifo\n");
+        return 1;
+    }
+    int success;
+    read(fd2, &success, sizeof(int));
+    sleep(2);
+    close(fd2);
+
+    if(success == 1){
+        printf("\n[!] Logged in successfully!\n");
+        sleep(1);
+    }
+    else if(success == -1){
+        printf("\n[!] Wrong password!\n");
+        sleep(1);
+        quit();
+    }
+    else if(success == 0){
+        printf("\n[!] User doesn't exist!\n");
+        sleep(1);
+        quit();
+    }
+    else if(success == -2){
+        printf("\n[!] Max number of users reached!\n");
+        sleep(1);
+        quit();
+    }
+
     frontendCommandReader();
 }
