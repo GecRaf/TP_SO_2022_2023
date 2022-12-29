@@ -2,11 +2,7 @@
 
 Item *items;
 int signalreceived; // flag
-void receiveSignal(int num)
-{
-    printf("\nSignal received!!");
-    signalreceived = 1;
-}
+
 
 int sell(char itemName[], char category[], int basePrice, int buyNowPrice, int duration)
 {
@@ -139,7 +135,7 @@ void *frontendCommandReader()
                     exit(EXIT_FAILURE);
                 }
                 // Should return the ID from the platform or -1 in case of insuccess
-            }
+            
             else
             {
                 printf("\nInvalid notation for command ' sell '\n");
@@ -325,13 +321,10 @@ int backendOn()
 
 
 
-void receiveSignal(int s, siginfo_t *info, void *v)
+void receiveSignal(int n)
 {
     printf("\nSignal received!!");
-    if(s == SIGUSR1)
-    {
-        quit();
-    }
+    quit();
     
 }
 
@@ -341,11 +334,7 @@ int main(int argc, char **argv)
     char *maxItemsChar;
     User user;
     
-    struct sigaction sa;
-    sa.sa_sigaction = receiveSignal;
-    sa.sa_flags = SA_SIGINFO;
-    sigaction(SIGUSR1, &sa, NULL);
-
+    signal(SIGINT, receiveSignal);
     
     pthread_t threadBackendComms;
     signalreceived = 0;
@@ -442,15 +431,7 @@ int main(int argc, char **argv)
     }
 
     pthread_join(threadBackendComms, NULL);
-
-    signal(SIGUSR1, receiveSignal);
-    while (1)
-    {
         frontendCommandReader();
-        if (signalreceived == 1)
-        {
-            printf("Something happened");
-        }
-    }
+        
     return 0;
 }
