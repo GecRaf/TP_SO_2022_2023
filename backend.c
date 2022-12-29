@@ -43,8 +43,7 @@ void listUsers()
 void list() {}
 void kick(char username[]) {}
 void prom() {}
-void reprom()
-{
+void reprom(){
     // Retry later...
     /*char promotor;
     FILE *f = fopen(promotersFile, "r");
@@ -80,8 +79,7 @@ void quitPromotor()
     // pthread_join(thread, NULL);
     //  kill(pid, SIGUSR2); // Not understood
 }
-void quit()
-{
+void quit(){
     int i = 0;
     printf("\n[!] Closing...\n\n");
 
@@ -91,8 +89,7 @@ void quit()
     sleep(1);
     exit(EXIT_SUCCESS);
 }
-void clear()
-{
+void clear(){
     system("clear");
 }
 void backendCommandReader()
@@ -308,8 +305,29 @@ int instanceController()
     }
     return 0;
 }
-void frontendCommns()
+void *frontendCommns()
 {
+    // TODO: Mutex implementation
+    // TODO: Stops printing? Check this later
+    int fd = open(BACKEND_FIFO_FRONTEND, O_RDONLY);
+    if (fd == -1)
+    {
+        printf("\n[!] Error while opening pipe BACKEND_FIFO_FRONTEND\n");
+        exit(EXIT_FAILURE);
+    }
+    
+    while(1){
+        char mensagem[100];
+        int size = read(fd, &mensagem, sizeof(mensagem));
+        if (size > 0)
+        {
+            mensagem[size] = '\0';
+            printf("\n\n[~] Message from frontend: %s\n", mensagem);
+        }
+        pthread_exit((void *)NULL);
+    }
+    close(fd);
+
     /*char mensagem[100];
     int size = read(BACKEND_FIFO_FRONTEND, &mensagem, sizeof(mensagem));
     if (size == -1)
@@ -331,7 +349,7 @@ void *verifyCredentials()
     int fd = open(BACKEND_FIFO, O_RDONLY);
     if (fd == -1)
     {
-        printf("\n[!] Error while opening pipe\n");
+        printf("\n[!] Error while opening pipe BACKEND_FIFO\n");
         exit(EXIT_FAILURE);
     }
 
@@ -470,17 +488,27 @@ int main(int argc, char **argv)
         return 0;
     }
 
+    if (mkfifo(BACKEND_FIFO_FRONTEND, 0666) == -1)
+    {
+        printf("\n[!] Error while creating the backendFrontend FIFO\n");
+        return 0;
+    }
+
     readItemsFile();
 
     int MAX_PROMOTORS = atoi(getenv("MAX_PROMOTORS"));
     pthread_t threadPromotor[threadCounter];
-    pthread_t threadCreadentials;
+    pthread_t threadCredentials;
+    pthread_t threadFrontendComms;
     char *promotersFile = getenv("FPROMOTERS");
 
     if (pthread_create(&threadPromotor[threadCounter], NULL, promotorComms, NULL) != 0)
-        perror("Erro na criação da thread");
+        perror("Error creating thread");
 
-    if (pthread_create(&threadCreadentials, NULL, verifyCredentials, NULL) != 0)
+    if (pthread_create(&threadCredentials, NULL, verifyCredentials, NULL) != 0)
+        perror("Error creating thread");
+
+    if (pthread_create(&threadFrontendComms, NULL, frontendCommns, NULL) != 0)
         perror("Erro na criação da thread");
 
 
@@ -497,7 +525,8 @@ int main(int argc, char **argv)
         pthread_join(threadPromotor[threadCounter], NULL);
         --threadCounter;
     }
-    pthread_join(threadCreadentials, NULL);
+    pthread_join(threadCredentials, NULL);
+    pthread_join(threadFrontendComms, NULL);
 
     pthread_exit((void *)NULL);
     unlink(BACKEND_FIFO);
