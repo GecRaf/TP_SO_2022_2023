@@ -82,6 +82,7 @@ void quitPromotor()
 void quit(){
     int i = 0;
     printf("\n[!] Closing...\n\n");
+    
     unlink(BACKEND_FIFO);
     unlink(BACKEND_FIFO_FRONTEND);
     quitPromotor();
@@ -180,6 +181,8 @@ void backendCommandReader()
                 continue;
             }
             quit(); // Needs to assure closing of possible open pipes and threads
+            //Needs to inform current frontends running that its closing
+
         }
         else if (strcmp(cmd, "clear") == 0)
         {
