@@ -84,7 +84,7 @@ void quit()
 {
     int i = 0;
     printf("\n[!] Closing...\n\n");
-    
+
     unlink(BACKEND_FIFO);
     unlink(BACKEND_FIFO_FRONTEND);
     quitPromotor();
@@ -183,8 +183,10 @@ void backendCommandReader()
                 printf("[!] No arguments needed\n");
                 continue;
             }
-            quit(); // Needs to assure closing of possible open pipes and threads
             //Needs to inform current frontends running that its closing
+            kill(getpid(), SIGUSR1);
+            quit(); // Needs to assure closing of possible open pipes and threads
+            
 
         }
         else if (strcmp(cmd, "clear") == 0)
@@ -417,6 +419,12 @@ void *verifyCredentials()
     pthread_exit((void *)NULL);
 }
 
+void sendSignal(int s, siginfo_t *info, void *v)
+{
+    int n= info-> si_value.sival_int;
+    kill(info->si_pid, SIGUSR1);
+}
+
 int main(int argc, char **argv)
 {
     clear();
@@ -475,6 +483,12 @@ int main(int argc, char **argv)
     if (pthread_create(&threadCreadentials, NULL, verifyCredentials, NULL) != 0)
         perror("Erro na criação da thread");
 
+
+    
+    struct sigaction sa;
+    sa.sa_sigaction = sendSignal;
+    sa.sa_flags = SA_SIGINFO;
+    sigaction(SIGINT, &sa, NULL);
     sleep(3);
     backendCommandReader(); // Needs to integrate a thread
 
