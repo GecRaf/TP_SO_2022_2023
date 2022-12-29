@@ -1,6 +1,12 @@
 #include "utils.h"
 
 Item* items;
+int signalreceived; //flag
+void receiveSignal(int num)
+{
+    printf("\nSignal received!!");
+    signalreceived = 1;
+}
 
 int sell(char itemName[], char category[], int basePrice, int buyNowPrice, int duration)
 {
@@ -246,6 +252,7 @@ int main(int argc, char **argv)
     int maxItems;
     char *maxItemsChar;
     User user;
+    signalreceived = 0;
 
     if(backendOn()){
         printf("\n[!] Backend program isn't running yet!\n");
@@ -324,5 +331,13 @@ int main(int argc, char **argv)
         quit();
     }
 
+    signal(SIGUSR1, receiveSignal);
+    while(1)
+    {
     frontendCommandReader();
+    if(signalreceived == 1)
+    {
+        printf("Something happened");
+    }
+    }
 }
