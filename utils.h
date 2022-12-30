@@ -19,8 +19,18 @@
 #define FRONTEND_FIFO "frontend_fifo[%d]"
 char FRONTEND_FINAL_FIFO[50];
 
+typedef struct structThreadCredentials{
+    struct backend *backend;
+    struct user *user;
+}StructThreadCredentials;
+
 typedef struct backend{
     int connectedClients;
+    pthread_mutex_t *mutex;
+    char *promotors[100];
+    int maxPromoters;
+    int maxItems;
+    int maxUsers;
 }Backend;
 
 typedef struct user{
@@ -28,6 +38,7 @@ typedef struct user{
     char password[20];
     int balance;
     int PID;
+    int loggedIn;
 }User;
 
 typedef struct item{
@@ -42,6 +53,7 @@ typedef struct item{
 }Item;
 
 typedef struct promotor{
+    char name[20];
     char category[20];
     int discount;
     int duration;

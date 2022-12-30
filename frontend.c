@@ -7,7 +7,6 @@ void receiveSignal(int num)
     printf("\nSignal received!!");
     signalreceived = 1;
 }
-
 int sell(char itemName[], char category[], int basePrice, int buyNowPrice, int duration)
 {
     printf("\nitemName: %s\ncategory: %s\nbasePrice: %d\nbuyNowPrice: %d\nduration: %d\n\n",
@@ -100,27 +99,27 @@ void *frontendCommandReader()
                 int basePrice = atoi(basePriceChar), buyNowPrice = atoi(buyNowPriceChar), duration = atoi(durationChar);
                 if (strcmp(itemName, "") == 0)
                 {
-                    printf("\nInvalid notation for command ' sell ' in <item-name>\n");
+                    printf("\n[!]Invalid notation for command ' sell ' in <item-name>\n");
                     continue;
                 }
                 else if (strcmp(category, "") == 0)
                 {
-                    printf("\nInvalid notation for command ' sell ' in <category>\n");
+                    printf("\n[!] Invalid notation for command ' sell ' in <category>\n");
                     continue;
                 }
                 else if (basePrice == 0)
                 {
-                    printf("\nInvalid notation for command ' sell '! Base Price must be > 0 \n");
+                    printf("\n[!] Invalid notation for command ' sell '! Base Price must be > 0 \n");
                     continue;
                 }
                 else if (buyNowPrice == 0)
                 {
-                    printf("\nInvalid notation for command ' sell '! Buy Now Price must be > 0 \n");
+                    printf("\n[!] Invalid notation for command ' sell '! Buy Now Price must be > 0 \n");
                     continue;
                 }
                 else if (duration == 0)
                 {
-                    printf("\nInvalid notation for command ' sell '! Duration must be > 0 \n");
+                    printf("\n[!] Invalid notation for command ' sell '! Duration must be > 0 \n");
                     continue;
                 }
                 int success = sell(itemName, category, basePrice, buyNowPrice, duration); // Puts item to sell
@@ -139,8 +138,8 @@ void *frontendCommandReader()
             }
             else
             {
-                printf("\nInvalid notation for command ' sell '\n");
-                printf("Use the following notation: 'sell <item-name> <category> <base-price> <buy-now-price> <duration>'\n");
+                printf("\n[!] Invalid notation for command ' sell '\n");
+                printf("[~]Use the following notation: 'sell <item-name> <category> <base-price> <buy-now-price> <duration>'\n");
                 continue;
             }
         }
