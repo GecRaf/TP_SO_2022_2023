@@ -1,5 +1,4 @@
 #include "utils.h"
-
 Item *items;
 int signalreceived; // flag
 void receiveSignal(int num)
@@ -127,6 +126,9 @@ void *frontendCommandReader()
                     printf("\n[!] Error creating new item!\n");
                 else
                     printf("\n[~] New item added successfully!\nID: %d\n\n", success);
+                // Should return the ID from the platform or -1 in case of insuccess
+            }
+
                 // Send command to backend
                 int size = write(fd, command, strlen(command) + 1);
                 if (size == -1)
@@ -135,7 +137,7 @@ void *frontendCommandReader()
                     exit(EXIT_FAILURE);
                 }
                 // Should return the ID from the platform or -1 in case of insuccess
-            }
+            
             else
             {
                 printf("\n[!] Invalid notation for command ' sell '\n");
@@ -319,13 +321,25 @@ int backendOn()
     return 0;
 }
 
+
+
+void receiveSignal(int n)
+{
+    printf("\nCtrl+C activated");
+    quit();
+    
+}
+
 int main(int argc, char **argv)
 {
     int maxItems;
     char *maxItemsChar;
     User user;
+    
+    signal(SIGINT, receiveSignal);
+    
     pthread_t threadBackendComms;
-    signalreceived = 0;
+    
 
     if (backendOn())
     {
@@ -411,21 +425,15 @@ int main(int argc, char **argv)
         quit();
     }
 
+
+    frontendCommandReader();
     if (pthread_create(&threadBackendComms, NULL, frontendCommandReader, NULL) != 0)
     {
         perror("Error creating thread");
     }
 
     pthread_join(threadBackendComms, NULL);
-
-    signal(SIGUSR1, receiveSignal);
-    while (1)
-    {
         frontendCommandReader();
-        if (signalreceived == 1)
-        {
-            printf("Something happened");
-        }
-    }
+        
     return 0;
 }

@@ -1,6 +1,7 @@
 #include "utils.h"
 #include "users_lib.h"
 
+
 int pipeBP[2], pipePB[2];
 int threadCounter = 2;
 
@@ -66,7 +67,7 @@ void quitPromotor()
 void quit(){
     int i = 0;
     printf("\n[!] Closing...\n\n");
-    
+
     unlink(BACKEND_FIFO);
     unlink(BACKEND_FIFO_FRONTEND);
     quitPromotor();
@@ -166,8 +167,10 @@ void backendCommandReader(void *backend, void *user)
                 printf("[!] No arguments needed\n");
                 continue;
             }
-            quit(); // Needs to assure closing of possible open pipes and threads
             //Needs to inform current frontends running that its closing
+            kill(getpid(), SIGUSR1);
+            quit(); // Needs to assure closing of possible open pipes and threads
+            
 
         }
         else if (strcmp(cmd, "clear") == 0)
@@ -373,7 +376,7 @@ void *verifyCredentials(void *structThreadCredentials)
                 }
 
                 int result = 0;
-
+                
                 char *usersFile = getenv("FUSERS");
                 f = fopen(usersFile, "r");
                 if (f == NULL)
@@ -439,6 +442,20 @@ void *verifyCredentials(void *structThreadCredentials)
     close(fd);
     pthread_exit((void *)NULL);
 }
+
+void sendSignal(int s, siginfo_t *info, void *v)
+{
+    int n= info-> si_value.sival_int;
+    kill(info->si_pid, SIGUSR1);
+}
+
+void crtlCSignal()
+{
+    printf("\nCtrl+C activated");
+    //SEND KILL SIGNAL TO FRONTEND... HOW
+    quit();
+}
+
 int main(int argc, char **argv)
 {
     clear();
@@ -524,6 +541,12 @@ int main(int argc, char **argv)
     if (pthread_create(&threadFrontendComms, NULL, frontendCommns, &backend) != 0)
         perror("Erro na criação da thread");
 
+
+    signal(SIGINT, crtlCSignal);
+   /* struct sigaction sa;
+    sa.sa_sigaction = sendSignal;
+    sa.sa_flags = SA_SIGINFO;
+    sigaction(SIGINT, &sa, NULL);*/
     sleep(3);
     backendCommandReader(&backend, &usr); // Needs to integrate a thread
 
