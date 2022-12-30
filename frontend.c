@@ -1,8 +1,5 @@
 #include "utils.h"
-
 Item *items;
-int signalreceived; // flag
-
 
 int sell(char itemName[], char category[], int basePrice, int buyNowPrice, int duration)
 {
@@ -323,7 +320,7 @@ int backendOn()
 
 void receiveSignal(int n)
 {
-    printf("\nSignal received!!");
+    printf("\nCtrl+C activated");
     quit();
     
 }
@@ -337,7 +334,7 @@ int main(int argc, char **argv)
     signal(SIGINT, receiveSignal);
     
     pthread_t threadBackendComms;
-    signalreceived = 0;
+    
 
     if (backendOn())
     {

@@ -1,6 +1,7 @@
 #include "utils.h"
 #include "users_lib.h"
 
+
 int pipeBP[2], pipePB[2];
 int threadCounter = 0;
 
@@ -371,7 +372,7 @@ void *verifyCredentials()
                 }
 
                 int result = 0;
-
+                
                 char *usersFile = getenv("FUSERS");
                 f = fopen(usersFile, "r");
                 if (f == NULL)
@@ -443,6 +444,13 @@ void sendSignal(int s, siginfo_t *info, void *v)
     kill(info->si_pid, SIGUSR1);
 }
 
+void crtlCSignal()
+{
+    printf("\nCtrl+C activated");
+    //SEND KILL SIGNAL TO FRONTEND... HOW
+    quit();
+}
+
 int main(int argc, char **argv)
 {
     clear();
@@ -512,11 +520,11 @@ int main(int argc, char **argv)
         perror("Erro na criação da thread");
 
 
-    
-    struct sigaction sa;
+    signal(SIGINT, crtlCSignal);
+   /* struct sigaction sa;
     sa.sa_sigaction = sendSignal;
     sa.sa_flags = SA_SIGINFO;
-    sigaction(SIGINT, &sa, NULL);
+    sigaction(SIGINT, &sa, NULL);*/
     sleep(3);
     backendCommandReader(); // Needs to integrate a thread
 
