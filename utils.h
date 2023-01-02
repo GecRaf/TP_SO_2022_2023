@@ -39,7 +39,14 @@ typedef struct user{
     int balance;
     int PID;
     int loggedIn;
+    struct user *next;
 }User;
+
+typedef struct comms{
+    char username[20];
+    char message[100];
+    int PID;
+}Comms;
 
 typedef struct item{
     int id;
@@ -53,10 +60,11 @@ typedef struct item{
 }Item;
 
 typedef struct promotor{
-    char name[20];
+    char path[20];
     char category[20];
     int discount;
     int duration;
+    struct promotor *next;
 }Promotor;
 
 #endif // !BACKHEND_H

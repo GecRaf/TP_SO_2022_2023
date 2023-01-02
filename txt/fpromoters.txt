@@ -1,2 +1,2 @@
-black_friday brinquedos 50 100
-promotor_oficial bricolage 20 200
+black_friday
+promotor_oficial

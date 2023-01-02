@@ -1,11 +1,6 @@
 #include "utils.h"
 Item *items;
 int signalreceived; // flag
-void receiveSignal(int num)
-{
-    printf("\nSignal received!!");
-    signalreceived = 1;
-}
 int sell(char itemName[], char category[], int basePrice, int buyNowPrice, int duration)
 {
     printf("\nitemName: %s\ncategory: %s\nbasePrice: %d\nbuyNowPrice: %d\nduration: %d\n\n",
@@ -68,8 +63,14 @@ void clear()
 {
     system("clear");
 }
-void *frontendCommandReader()
+void *frontendCommandReader(void *user_ptr)
 {
+    User *usr = (User *)user_ptr;
+    
+    Comms comms;
+    comms.PID = getpid();
+    strcpy(comms.username, usr->username);
+
     int fd = open(BACKEND_FIFO_FRONTEND, O_WRONLY);
     if (fd == -1)
     {
@@ -129,15 +130,16 @@ void *frontendCommandReader()
                 // Should return the ID from the platform or -1 in case of insuccess
             }
 
-                // Send command to backend
-                int size = write(fd, command, strlen(command) + 1);
-                if (size == -1)
-                {
-                    printf("\n[!] Error writing to backend fifo\n\n");
-                    exit(EXIT_FAILURE);
-                }
-                // Should return the ID from the platform or -1 in case of insuccess
-            
+            // Send command to backend
+            strcpy(comms.message, cmd);  
+            int size = write(fd, &comms, sizeof(comms));
+            if (size == -1)
+            {
+                printf("\n[!] Error writing to backend fifo\n\n");
+                exit(EXIT_FAILURE);
+            }
+            // Should return the ID from the platform or -1 in case of insuccess
+
             else
             {
                 printf("\n[!] Invalid notation for command ' sell '\n");
@@ -147,7 +149,8 @@ void *frontendCommandReader()
         }
         else if (strcmp(cmd, "list") == 0)
         {
-            int size = write(fd, command, strlen(command) + 1);
+            strcpy(comms.message, cmd);  
+            int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
                 printf("\n[!] Error writing to backend fifo\n\n");
@@ -163,7 +166,8 @@ void *frontendCommandReader()
                 printf("[~] Use the following notation: 'licat <category-name>'\n");
                 continue;
             }
-            int size = write(fd, command, strlen(command) + 1);
+            strcpy(comms.message, cmd);  
+            int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
                 printf("\n[!] Error writing to backend fifo\n\n");
@@ -179,7 +183,8 @@ void *frontendCommandReader()
                 printf("[~] Use the following notation: 'lisel <seller-username>'\n");
                 continue;
             }
-            int size = write(fd, command, strlen(command) + 1);
+            strcpy(comms.message, cmd);  
+            int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
                 printf("\n[!] Error writing to backend fifo\n\n");
@@ -196,7 +201,8 @@ void *frontendCommandReader()
                 printf("[~] Use the following notation: 'lival <max-price>'\n");
                 continue;
             }
-            int size = write(fd, command, strlen(command) + 1);
+            strcpy(comms.message, cmd);  
+            int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
                 printf("\n[!] Error writing to backend fifo\n\n");
@@ -213,7 +219,8 @@ void *frontendCommandReader()
                 printf("[~] Use the following notation: 'litime <hour-in-seconds>'\n");
                 continue;
             }
-            int size = write(fd, command, strlen(command) + 1);
+            strcpy(comms.message, cmd);  
+            int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
                 printf("\n[!] Error writing to backend fifo\n\n");
@@ -224,7 +231,8 @@ void *frontendCommandReader()
         else if (strcmp(cmd, "time") == 0)
         {
             currentTime(); // Displays current hour in seconds
-            int size = write(fd, command, strlen(command) + 1);
+            strcpy(comms.message, cmd);  
+            int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
                 printf("\n[!] Error writing to backend fifo\n\n");
@@ -242,7 +250,8 @@ void *frontendCommandReader()
                 printf("[~] Use the following notation: 'buy <id> <value>'\n");
                 continue;
             }
-            int size = write(fd, command, strlen(command) + 1);
+            strcpy(comms.message, cmd);  
+            int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
                 printf("\n[!] Error writing to backend fifo\n\n");
@@ -253,7 +262,8 @@ void *frontendCommandReader()
         else if (strcmp(cmd, "cash") == 0)
         {
             userBalance(); // Displays user's available balance
-            int size = write(fd, command, strlen(command) + 1);
+            strcpy(comms.message, cmd);  
+            int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
                 printf("\n[!] Error writing to backend fifo\n\n");
@@ -269,7 +279,8 @@ void *frontendCommandReader()
                 printf("[~] Use the following notation: 'add <value>'\n");
                 continue;
             }
-            int size = write(fd, command, strlen(command) + 1);
+            strcpy(comms.message, cmd);  
+            int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
                 printf("\n[!] Error writing to backend fifo\n\n");
@@ -279,9 +290,19 @@ void *frontendCommandReader()
         }
         else if (strcmp(cmd, "exit") == 0)
         {
+            strcpy(comms.message, cmd);
+            // Debugging
+            printf("\n[~] Sending data to backend...\n");
+            printf("[~] Message: %s", comms.message);
+            printf("[~] Username: %s", comms.username);
+            printf("[~] PID: %d", comms.PID);
+            int size = write(fd, &comms, sizeof(comms));
+            if (size == -1)
+            {
+                printf("\n[!] Error writing to backend fifo\n\n");
+                exit(EXIT_FAILURE);
+            }
             quit();
-            // Just for basic testing, needs to assure closing of possible open pipes and threads
-            // Needs to warn "backend" that is closing (signals)
         }
         else if (strcmp(cmd, "clear") == 0)
         {
@@ -320,14 +341,11 @@ int backendOn()
     }
     return 0;
 }
-
-
-
 void receiveSignal(int n)
 {
-    printf("\nCtrl+C activated");
+    printf("\n\n[!] Backend program is closing...\n");
+    sleep(1);
     quit();
-    
 }
 
 int main(int argc, char **argv)
@@ -335,11 +353,10 @@ int main(int argc, char **argv)
     int maxItems;
     char *maxItemsChar;
     User user;
-    
+
     signal(SIGINT, receiveSignal);
-    
+
     pthread_t threadBackendComms;
-    
 
     if (backendOn())
     {
@@ -418,6 +435,12 @@ int main(int argc, char **argv)
         sleep(1);
         quit();
     }
+    else if (success == 2)
+    {
+        printf("\n[!] User already logged in!\n");
+        sleep(1);
+        quit();
+    }
     else if (success == -2)
     {
         printf("\n[!] Max number of users reached!\n");
@@ -425,15 +448,12 @@ int main(int argc, char **argv)
         quit();
     }
 
-
-    frontendCommandReader();
-    if (pthread_create(&threadBackendComms, NULL, frontendCommandReader, NULL) != 0)
+    if (pthread_create(&threadBackendComms, NULL, frontendCommandReader, &user) != 0)
     {
         perror("Error creating thread");
     }
 
     pthread_join(threadBackendComms, NULL);
-        frontendCommandReader();
-        
+
     return 0;
 }
