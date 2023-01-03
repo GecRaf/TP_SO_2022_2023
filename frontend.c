@@ -102,34 +102,34 @@ void *frontendCommandReader(void *user_ptr)
                 int basePrice = atoi(basePriceChar), buyNowPrice = atoi(buyNowPriceChar), duration = atoi(durationChar);
                 if (strcmp(itemName, "") == 0)
                 {
-                    printf("\n[!]Invalid notation for command ' sell ' in <item-name>\n");
+                    printf("\n\t[!] Invalid notation for command ' sell ' in <item-name>\n\n");
                     continue;
                 }
                 else if (strcmp(category, "") == 0)
                 {
-                    printf("\n[!] Invalid notation for command ' sell ' in <category>\n");
+                    printf("\n\t[!] Invalid notation for command ' sell ' in <category>\n\n");
                     continue;
                 }
                 else if (basePrice == 0)
                 {
-                    printf("\n[!] Invalid notation for command ' sell '! Base Price must be > 0 \n");
+                    printf("\n\t[!] Invalid notation for command ' sell '! Base Price must be > 0 \n\n");
                     continue;
                 }
                 else if (buyNowPrice == 0)
                 {
-                    printf("\n[!] Invalid notation for command ' sell '! Buy Now Price must be > 0 \n");
+                    printf("\n\t[!] Invalid notation for command ' sell '! Buy Now Price must be > 0 \n\n");
                     continue;
                 }
                 else if (duration == 0)
                 {
-                    printf("\n[!] Invalid notation for command ' sell '! Duration must be > 0 \n");
+                    printf("\n\t[!] Invalid notation for command ' sell '! Duration must be > 0 \n\n");
                     continue;
                 }
                 int success = sell(itemName, category, basePrice, buyNowPrice, duration); // Puts item to sell
                 if (success == -1)
-                    printf("\n[!] Error creating new item!\n");
+                    printf("\n\t[!] Error creating new item!\n");
                 else
-                    printf("\n[~] New item added successfully!\nID: %d\n\n", success);
+                    printf("\n\t[~] New item added successfully!\nID: %d\n\n", success);
                 // Should return the ID from the platform or -1 in case of insuccess
             }
 
@@ -138,15 +138,15 @@ void *frontendCommandReader(void *user_ptr)
             int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
-                printf("\n[!] Error writing to backend fifo\n\n");
+                printf("\n\t[!] Error writing to backend fifo\n\n");
                 exit(EXIT_FAILURE);
             }
             // Should return the ID from the platform or -1 in case of insuccess
 
             else
             {
-                printf("\n[!] Invalid notation for command ' sell '\n");
-                printf("[~]Use the following notation: 'sell <item-name> <category> <base-price> <buy-now-price> <duration>'\n");
+                printf("\n\t[!] Invalid notation for command ' sell '\n");
+                printf("\t[~] Use the following notation: 'sell <item-name> <category> <base-price> <buy-now-price> <duration>'\n\n");
                 continue;
             }
         }
@@ -156,7 +156,7 @@ void *frontendCommandReader(void *user_ptr)
             int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
-                printf("\n[!] Error writing to backend fifo\n\n");
+                printf("\n\t[!] Error writing to backend fifo\n\n");
                 exit(EXIT_FAILURE);
             }
             list(); // Lists available items
@@ -165,15 +165,15 @@ void *frontendCommandReader(void *user_ptr)
         {
             if (strcmp(arg, "") == 0)
             {
-                printf("\n[!] Invalid notation for command ' licat '\n");
-                printf("[~] Use the following notation: 'licat <category-name>'\n");
+                printf("\n\t[!] Invalid notation for command ' licat '\n");
+                printf("\t[~] Use the following notation: 'licat <category-name>'\n\n");
                 continue;
             }
             strcpy(comms.message, cmd);  
             int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
-                printf("\n[!] Error writing to backend fifo\n\n");
+                printf("\n\t[!] Error writing to backend fifo\n\n");
                 exit(EXIT_FAILURE);
             }
             licat(arg); // Lists available per category
@@ -182,15 +182,15 @@ void *frontendCommandReader(void *user_ptr)
         {
             if (strcmp(arg, "") == 0)
             {
-                printf("\n[!] Invalid notation for command ' lisel '\n");
-                printf("[~] Use the following notation: 'lisel <seller-username>'\n");
+                printf("\n\t[!] Invalid notation for command ' lisel '\n");
+                printf("\t[~] Use the following notation: 'lisel <seller-username>'\n\n");
                 continue;
             }
             strcpy(comms.message, cmd);  
             int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
-                printf("\n[!] Error writing to backend fifo\n\n");
+                printf("\n\t[!] Error writing to backend fifo\n\n");
                 exit(EXIT_FAILURE);
             }
             lisel(arg); // Lists specific seller items
@@ -200,15 +200,15 @@ void *frontendCommandReader(void *user_ptr)
             int value = atoi(arg);
             if (strcmp(arg, "") == 0 || value == 0)
             {
-                printf("\n[!] Invalid notation for command ' lival '\n");
-                printf("[~] Use the following notation: 'lival <max-price>'\n");
+                printf("\n\t[!] Invalid notation for command ' lival '\n");
+                printf("\t[~] Use the following notation: 'lival <max-price>'\n\n");
                 continue;
             }
             strcpy(comms.message, cmd);  
             int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
-                printf("\n[!] Error writing to backend fifo\n\n");
+                printf("\n\t[!] Error writing to backend fifo\n\n");
                 exit(EXIT_FAILURE);
             }
             lival(value); // Lists items until a certain price range
@@ -218,15 +218,15 @@ void *frontendCommandReader(void *user_ptr)
             int duration = atoi(arg);
             if (strcmp(arg, "") == 0 || duration == 0)
             {
-                printf("\n[!] Invalid notation for command ' litime '\n");
-                printf("[~] Use the following notation: 'litime <hour-in-seconds>'\n");
+                printf("\n\t[!] Invalid notation for command ' litime '\n");
+                printf("\t[~] Use the following notation: 'litime <hour-in-seconds>'\n\n");
                 continue;
             }
             strcpy(comms.message, cmd);  
             int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
-                printf("\n[!] Error writing to backend fifo\n\n");
+                printf("\n\t[!] Error writing to backend fifo\n\n");
                 exit(EXIT_FAILURE);
             }
             litime(duration); // Lists available until a certain hour
@@ -238,7 +238,7 @@ void *frontendCommandReader(void *user_ptr)
             int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
-                printf("\n[!] Error writing to backend fifo\n\n");
+                printf("\n\t[!] Error writing to backend fifo\n\n");
                 exit(EXIT_FAILURE);
             }
         }
@@ -249,15 +249,15 @@ void *frontendCommandReader(void *user_ptr)
             int id = atoi(idChar), value = atoi(valueChar);
             if (strcmp(arg, "") == 0 || id == 0 || value == 0)
             {
-                printf("\n[!] Invalid notation for command ' buy '\n");
-                printf("[~] Use the following notation: 'buy <id> <value>'\n");
+                printf("\n\t[!] Invalid notation for command ' buy '\n");
+                printf("\t[~] Use the following notation: 'buy <id> <value>'\n\n");
                 continue;
             }
             strcpy(comms.message, cmd);  
             int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
-                printf("\n[!] Error writing to backend fifo\n\n");
+                printf("\n\t[!] Error writing to backend fifo\n\n");
                 exit(EXIT_FAILURE);
             }
             buy(id, value); // Lists active promotors
@@ -268,7 +268,7 @@ void *frontendCommandReader(void *user_ptr)
             int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
-                printf("\n[!] Error writing to backend fifo\n\n");
+                printf("\n\t[!] Error writing to backend fifo\n\n");
                 exit(EXIT_FAILURE);
             }
             // Open frontend fifo
@@ -276,14 +276,14 @@ void *frontendCommandReader(void *user_ptr)
             int fd2 = open(FRONTEND_FINAL_FIFO, O_RDONLY);
             if (fd2 == -1)
             {
-                printf("\n[!] Error opening frontend fifo\n\n");
+                printf("\n\t[!] Error opening frontend fifo\n\n");
                 exit(EXIT_FAILURE);
             }
             // Read from frontend fifo
             int size2 = read(fd2, &comms, sizeof(comms));
             if (size2 == -1)
             {
-                printf("\n[!] Error reading from frontend fifo\n\n");
+                printf("\n\t[!] Error reading from frontend fifo\n\n");
                 exit(EXIT_FAILURE);
             }    
             printf("\n\t[~] Your current balance is: %d euros \n\n", comms.balance);
@@ -294,8 +294,8 @@ void *frontendCommandReader(void *user_ptr)
             int value = atoi(arg);
             if (strcmp(arg, "") == 0 || value == 0)
             {
-                printf("\n[!] Invalid notation for command ' add '\n");
-                printf("[~] Use the following notation: 'add <value>'\n");
+                printf("\n\t[!] Invalid notation for command ' add '\n");
+                printf("\t[~] Use the following notation: 'add <value>'\n\n");
                 continue;
             }
             strcpy(comms.message, cmd);  
@@ -312,13 +312,13 @@ void *frontendCommandReader(void *user_ptr)
             int fd2 = open(FRONTEND_FINAL_FIFO, O_RDONLY);
             if (fd2 == -1)
             {
-                printf("\n[!] Error opening frontend fifo\n\n");
+                printf("\n\t[!] Error opening frontend fifo\n\n");
                 exit(EXIT_FAILURE);
             }
             int size2 = read(fd2, &comms, sizeof(comms));
             if (size2 == -1)
             {
-                printf("\n[!] Error reading from frontend fifo\n\n");
+                printf("\n\t[!] Error reading from frontend fifo\n\n");
                 exit(EXIT_FAILURE);
             }
             printf("\n\t[+] %d euros added to your balance\n", value);
@@ -328,15 +328,10 @@ void *frontendCommandReader(void *user_ptr)
         else if (strcmp(cmd, "exit") == 0)
         {
             strcpy(comms.message, cmd);
-            // Debugging
-            printf("\n[~] Sending data to backend...\n");
-            printf("[~] Message: %s", comms.message);
-            printf("[~] Username: %s", comms.username);
-            printf("[~] PID: %d", comms.PID);
             int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
-                printf("\n[!] Error writing to backend fifo\n\n");
+                printf("\n\t[!] Error writing to backend fifo\n\n");
                 exit(EXIT_FAILURE);
             }
             quit();
@@ -347,23 +342,23 @@ void *frontendCommandReader(void *user_ptr)
         }
         else if (strcmp(cmd, "help") == 0)
         {
-            printf("\t\n[!] Available commands:\n");
-            printf("[~] sell <item-name> <category> <base-price> <buy-now-price> <duration> || Place item for sale\n");
-            printf("[~] list || Lists available items\n");
-            printf("[~] licat <category-name> || Lists items by category\n");
-            printf("[~] lisel <seller-username> || Lists items by seller\n");
-            printf("[~] lival <max-price> || Lists items by maximum price\n");
-            printf("[~] litime <duration> || Lists items by limited time\n");
-            printf("[~] time || Displays current hour in seconds\n");
-            printf("[~] buy <id> <value> || Bid on item by specified id and value\n");
-            printf("[~] cash || Displays users available balance\n");
-            printf("[~] add <value> || Add specified value to users balance\n");
-            printf("[~] exit || Exit user interface\n");
-            printf("[~] clear || Console clear\n\n");
+            printf("\n\t\t[!] Available commands:\n");
+            printf("\t[~] sell <item-name> <category> <base-price> <buy-now-price> <duration> || Place item for sale\n");
+            printf("\t[~] list || Lists available items\n");
+            printf("\t[~] licat <category-name> || Lists items by category\n");
+            printf("\t[~] lisel <seller-username> || Lists items by seller\n");
+            printf("\t[~] lival <max-price> || Lists items by maximum price\n");
+            printf("\t[~] litime <duration> || Lists items by limited time\n");
+            printf("\t[~] time || Displays current hour in seconds\n");
+            printf("\t[~] buy <id> <value> || Bid on item by specified id and value\n");
+            printf("\t[~] cash || Displays users available balance\n");
+            printf("\t[~] add <value> || Add specified value to users balance\n");
+            printf("\t[~] exit || Exit user interface\n");
+            printf("\t[~] clear || Console clear\n\n");
         }
         else
         {
-            printf("\t[!] Command not found: '%s' (For help type: 'help')\n\n", cmd);
+            printf("\n\t[!] Command not found: '%s' (For help type: 'help')\n\n", cmd);
         }
     }
     pthread_exit((void *)NULL);
