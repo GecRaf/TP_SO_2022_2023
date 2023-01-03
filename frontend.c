@@ -42,12 +42,15 @@ void litime(int duration)
 {
     printf("\nduration: %d\n\n", duration);
 }
-void currentTime() {}
+void currentTime() {
+    time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+    printf("\n\t[~] Current time: %d-%d-%d %d:%d:%d\n\n", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+}
 void buy(int id, int value)
 {
     printf("\nid: %d\nvalue: %d\n\n", id, value);
 }
-void userBalance() {}
 void add(int value)
 {
     printf("\nvalue: %d\n\n", value);
@@ -261,7 +264,6 @@ void *frontendCommandReader(void *user_ptr)
         }
         else if (strcmp(cmd, "cash") == 0)
         {
-            userBalance(); // Displays user's available balance
             strcpy(comms.message, cmd);  
             int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
@@ -269,6 +271,23 @@ void *frontendCommandReader(void *user_ptr)
                 printf("\n[!] Error writing to backend fifo\n\n");
                 exit(EXIT_FAILURE);
             }
+            // Open frontend fifo
+            sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, pid);
+            int fd2 = open(FRONTEND_FINAL_FIFO, O_RDONLY);
+            if (fd2 == -1)
+            {
+                printf("\n[!] Error opening frontend fifo\n\n");
+                exit(EXIT_FAILURE);
+            }
+            // Read from frontend fifo
+            int size2 = read(fd2, &comms, sizeof(comms));
+            if (size2 == -1)
+            {
+                printf("\n[!] Error reading from frontend fifo\n\n");
+                exit(EXIT_FAILURE);
+            }    
+            printf("\n\t[~] Your current balance is: %d euros \n\n", comms.balance);
+            close(fd2);
         }
         else if (strcmp(cmd, "add") == 0)
         {
@@ -280,13 +299,31 @@ void *frontendCommandReader(void *user_ptr)
                 continue;
             }
             strcpy(comms.message, cmd);  
+            // Store the value to be added to the user's balance
+            comms.balance = value;
             int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
                 printf("\n[!] Error writing to backend fifo\n\n");
                 exit(EXIT_FAILURE);
             }
-            add(value); // Adds certain value to user's balance
+            // Read from frontend fifo the new balance
+            sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, pid);
+            int fd2 = open(FRONTEND_FINAL_FIFO, O_RDONLY);
+            if (fd2 == -1)
+            {
+                printf("\n[!] Error opening frontend fifo\n\n");
+                exit(EXIT_FAILURE);
+            }
+            int size2 = read(fd2, &comms, sizeof(comms));
+            if (size2 == -1)
+            {
+                printf("\n[!] Error reading from frontend fifo\n\n");
+                exit(EXIT_FAILURE);
+            }
+            printf("\n\t[+] %d euros added to your balance\n", value);
+            printf("\n\t[~] Your new balance is: %d euros \n\n", comms.balance);
+            close(fd2);
         }
         else if (strcmp(cmd, "exit") == 0)
         {

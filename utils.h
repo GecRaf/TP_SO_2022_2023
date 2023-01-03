@@ -27,7 +27,6 @@ typedef struct structThreadCredentials{
 typedef struct backend{
     int connectedClients;
     pthread_mutex_t *mutex;
-    char *promotors[100];
     int maxPromoters;
     int maxItems;
     int maxUsers;
@@ -45,6 +44,7 @@ typedef struct user{
 typedef struct comms{
     char username[20];
     char message[100];
+    int balance;
     int PID;
 }Comms;
 
@@ -57,6 +57,7 @@ typedef struct item{
     int duration;
     char sellingUser[20];
     char highestBidder[20]; 
+    struct item *next;
 }Item;
 
 typedef struct promotor{

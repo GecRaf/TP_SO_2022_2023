@@ -46,19 +46,60 @@ void loggedIn(void *user)
 {
     User *usr = (User *)user;
 
-    while (usr->loggedIn == 1)
+    printf("\n\t[~] List of users using the platform ATM:\n");
+
+    while (usr != NULL)
     {
-        printf("\n%s %s %d", usr->username, usr->password, usr->balance);
-        ++usr;
+        if (usr->loggedIn == 1)
+            printf("\n\t\t[~] %s\n", usr->username);
+        usr = usr->next;
     }
+    printf("\n");
 }
-void list() {}
-void kick(char username[]) {}
+void list(void *item)
+{
+    Item *it = (Item *)item;
+    printf("\n\t[~] List of items:\n");
+
+    while (it != NULL)
+    {
+        if(strcmp(it->name, "") != 0)
+            printf("\n\t\t[~] ID: %d\n\t\t[~] Name: %s\n\t\t[~] Category: %s\n\t\t[~] Base Price: %d\n\t\t[~] Buy Now Price: %d\n\t\t[~] Selling User: %s\n\t\t[~] Highest Bidder: %s\n", it->id, it->name, it->category, it->basePrice, it->buyNowPrice, it->sellingUser, it->highestBidder);
+        it = it->next;
+    }
+    printf("\n");
+}
+void kick(char username[], void *user) {
+    User *usr = (User *)user;
+    while (usr != NULL)
+    {
+        if (strcmp(usr->username, username) == 0)
+        {
+            if (usr->loggedIn == 1)
+            {
+                kill(usr->PID, SIGINT);
+                printf("\n\t[~] User '%s' kicked\n\n", username);
+                // Put the user loggedIn to 0
+                usr->loggedIn = 0;
+                return;
+            }
+            else
+            {
+                printf("\n\t[!] User '%s' is not logged in\n\n", username);
+                return;
+            }
+        }
+        usr = usr->next;
+    }
+    printf("\n\t[!] User '%s' does not exist\n\n", username);
+}
 void prom() {}
 void reprom(void *backend)
 {
 }
-void cancelPromotor() {}
+void cancelPromotor(char path[]) {
+
+}
 void quitPromotor()
 {
     close(pipePB[0]);
@@ -90,10 +131,11 @@ void clear()
 {
     system("clear");
 }
-void backendCommandReader(void *backend, void *user)
+void backendCommandReader(void *backend, void *user, void *item)
 {
     Backend *backend_ptr = (Backend *)backend;
     User *usr = (User *)user;
+    Item *it = (Item *)item;
     clear();
     int pid = getpid();
     char command[50];
@@ -128,7 +170,7 @@ void backendCommandReader(void *backend, void *user)
                 printf("[!] No arguments needed\n");
                 continue;
             }
-            list(); // Lists available items
+            list(it); // Lists available items
         }
         else if (strcmp(cmd, "kick") == 0)
         {
@@ -138,7 +180,7 @@ void backendCommandReader(void *backend, void *user)
                 printf("[~] Use the following notation: 'kick <username>'\n");
                 continue;
             }
-            kick(arg); // Kicks certain user by the username stored in "arg"
+            kick(arg, usr); // Kicks certain user by the username stored in "arg"
             *arg = 0;  // Clears arg char array
         }
         else if (strcmp(cmd, "prom") == 0)
@@ -170,7 +212,7 @@ void backendCommandReader(void *backend, void *user)
                 printf("[~] Use the following notation: 'cancel <promotors-executable-filename>'\n");
                 continue;
             }
-            cancelPromotor(); // Cancels promotor
+            cancelPromotor(arg); // Cancels promotor
         }
         else if (strcmp(cmd, "close") == 0)
         {
@@ -210,16 +252,15 @@ void backendCommandReader(void *backend, void *user)
         }
     }
 }
-void readItemsFile()
+void readItemsFile(void *item)
 {
+    Item *it = (Item *)item;
     FILE *f;
 
     char *maxItemsChar = getenv("MAX_ITEMS");
     int maxItems = atoi(maxItemsChar);
 
     char *itemsFile = getenv("FITEMS");
-
-    Item *it = (Item *)malloc(sizeof(Item) * maxItems);
 
     f = fopen(itemsFile, "r");
     if (f == NULL)
@@ -234,11 +275,14 @@ void readItemsFile()
 
     int count = 0;
 
-    while (fscanf(f, "%d %s %s %d %d %d %s %s[^\n]", &it->id, it->name, it->category, &it->basePrice, &it->buyNowPrice, &it->duration, it->sellingUser, it->highestBidder) == 8)
+    for(int i = 0; i < maxItems; i++)
     {
-        // printf("\n\n%d %s %s %d %d %d %s %s\n\n", it->id, it->name, it->category, it->basePrice, it->buyNowPrice, it->duration, it->sellingUser, it->highestBidder); // Testing
-        ++it;
-        ++count;
+        // 1 sapatilhas desporto 50 30 100
+        if(fscanf(f, "%d %s %s %d %d %d", &it->id, it->name, it->category, &it->basePrice, &it->buyNowPrice, &it->duration) == 6)
+            count++;
+        
+        it->next = (Item *)malloc(sizeof(Item));
+        it = it->next;
     }
 
     printf("\n[~] Successuflly read %d items\n", count);
@@ -344,18 +388,14 @@ void *frontendComms(void *structThreadCredentials)
         exit(EXIT_FAILURE);
     }
 
-    //TODO: Check this later. It's only verifying if the user logged out once.
-
     while (1)
     {
         User *user_ptr = structThreadCredentials_ptr->user;
         memset(&comms, 0, sizeof(comms));
         char mensagem[100];
-        //pthread_mutex_lock(backend_ptr->mutex);
         int size = read(fd, &comms, sizeof(comms));
         if (size > 0)
         {
-            printf("\n\n[~] Message from %s: %s\nPID: %d\n", comms.username, comms.message, comms.PID);
             if(strcmp(comms.message, "exit") == 0)
             {
                 printf("\n\n[~] User %s logged out\n", comms.username);
@@ -363,16 +403,71 @@ void *frontendComms(void *structThreadCredentials)
                 {
                     if(user_ptr->PID == comms.PID)
                     {
+                        pthread_mutex_lock(backend_ptr->mutex);
                         user_ptr->loggedIn = 0;
+                        pthread_mutex_unlock(backend_ptr->mutex);
                         break;
                     }
                     user_ptr = user_ptr->next;
                 }
-                break;
             }
-            printf("\n\n[~] Message from %s: %s\n", comms.username, comms.message);
+            else if(strcmp(comms.message, "cash") == 0){
+                while(user_ptr != NULL)
+                {
+                    if(user_ptr->PID == comms.PID)
+                    {
+                        comms.balance = user_ptr->balance;
+                        sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, comms.PID);
+                        int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
+                        if (fd == -1)
+                        {
+                            printf("\n[!] Error while opening pipe FRONTEND_FIFO\n");
+                            exit(EXIT_FAILURE);
+                        }
+                        int size2 = write(fd, &comms, sizeof(comms));
+                        if (size2 == -1)
+                        {
+                            printf("\n[!] Error while writing to pipe FRONTEND_FIFO\n");
+                            exit(EXIT_FAILURE);
+                        }
+                        close(fd);
+                        break;
+                    }
+                    user_ptr = user_ptr->next;
+                }
+            }
+            else if(strcmp(comms.message, "add") == 0){
+                while(user_ptr != NULL)
+                {
+                    if(user_ptr->PID == comms.PID)
+                    {
+                        pthread_mutex_lock(backend_ptr->mutex);
+                        user_ptr->balance += comms.balance;
+                        comms.balance = user_ptr->balance;
+                        pthread_mutex_unlock(backend_ptr->mutex);
+                        break;
+                    }
+                    user_ptr = user_ptr->next;
+                }
+                sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, comms.PID);
+                int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
+                if (fd == -1)
+                {
+                    printf("\n[!] Error while opening pipe FRONTEND_FIFO\n");
+                    exit(EXIT_FAILURE);
+                }
+                // Write comms to frontend
+                int size2 = write(fd, &comms, sizeof(comms));
+                if (size2 == -1)
+                {
+                    printf("\n[!] Error while writing to pipe FRONTEND_FIFO\n");
+                    exit(EXIT_FAILURE);
+                }
+                close(fd);
+            }
+
+            printf("\n\n[~] Message from %s: %s\n", comms.username, comms.message); // Debug
         }
-        //pthread_mutex_unlock(backend_ptr->mutex);
     }
     pthread_exit((void *)NULL);
     close(fd);
@@ -483,8 +578,7 @@ void sendSignal(int s, siginfo_t *info, void *v)
 }
 void crtlCSignal()
 {
-    printf("\nCtrl+C activated");
-    // SEND KILL SIGNAL TO FRONTEND... HOW
+    // SEND KILL SIGNAL TO FRONTEND...
     quit(NULL);
 }
 void readPromoters(void *prt){
@@ -524,7 +618,6 @@ int main(int argc, char **argv)
         return 0;
     } // Checks if there is already an instance of the backend running
 
-    // In order for this to work don't forget to compile varAmbiente.sh first! By doing: "source varAmbiente.sh in terminal"
     if (getenv("MAX_USERS") == NULL)
     {
 
@@ -565,14 +658,14 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    readItemsFile();
-
     StructThreadCredentials structThreadCredentials;
     Backend backend;
     User usr;
     Promotor prt;
+    Item itm;
     listUsers(&usr);
     readPromoters(&prt);
+    readItemsFile(&itm);
     backend.connectedClients = 0;
     backend.maxItems = atoi(getenv("MAX_ITEMS"));
     backend.maxUsers = atoi(getenv("MAX_USERS"));
@@ -612,13 +705,14 @@ int main(int argc, char **argv)
         perror("Error creating thread");
 
 
-    struct sigaction sa;
+    struct sigaction sa; //TODO: Check this later
      sa.sa_sigaction = crtlCSignal;
      sa.sa_flags = SA_SIGINFO;
      sigaction(SIGINT, &sa, NULL);
     
     sleep(3);
-    backendCommandReader(&backend, &usr); // Needs to integrate a thread
+
+    backendCommandReader(&backend, &usr, &itm); // Needs to integrate a thread
 
     while (threadCounter != 0)
     {
