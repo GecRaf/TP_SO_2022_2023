@@ -116,7 +116,7 @@ void quit(void *user)
     {
         if(usr->loggedIn == 1)
         {
-            kill(usr->PID, SIGINT);
+            kill(usr->PID, SIGUSR1);
         }
         usr = usr->next;
     }
@@ -280,7 +280,8 @@ void readItemsFile(void *item)
         // 1 sapatilhas desporto 50 30 100
         if(fscanf(f, "%d %s %s %d %d %d", &it->id, it->name, it->category, &it->basePrice, &it->buyNowPrice, &it->duration) == 6)
             count++;
-        
+        strcpy(it->highestBidder, "N/A");
+        strcpy(it->sellingUser, "N/A");
         it->next = (Item *)malloc(sizeof(Item));
         it = it->next;
     }
@@ -381,6 +382,8 @@ void *frontendComms(void *structThreadCredentials)
     Backend *backend_ptr = structThreadCredentials_ptr->backend;
     User user;
     Comms comms;
+    Item it;
+
     int fd = open(BACKEND_FIFO_FRONTEND, O_RDONLY);
     if (fd == -1)
     {
@@ -391,18 +394,20 @@ void *frontendComms(void *structThreadCredentials)
     while (1)
     {
         User *user_ptr = structThreadCredentials_ptr->user;
+        Item *item_ptr = structThreadCredentials_ptr->item;
         memset(&comms, 0, sizeof(comms));
-        char mensagem[100];
+
         int size = read(fd, &comms, sizeof(comms));
         if (size > 0)
         {
             if(strcmp(comms.message, "exit") == 0)
             {
-                printf("\n\n[~] User %s logged out\n", comms.username);
+                
                 while(user_ptr != NULL)
                 {
                     if(user_ptr->PID == comms.PID)
                     {
+                        printf("\n\n[~] User %s logged out\n", user_ptr->username);
                         pthread_mutex_lock(backend_ptr->mutex);
                         user_ptr->loggedIn = 0;
                         pthread_mutex_unlock(backend_ptr->mutex);
@@ -412,6 +417,7 @@ void *frontendComms(void *structThreadCredentials)
                 }
             }
             else if(strcmp(comms.message, "cash") == 0){
+                printf("\n\n\t[~] '%s' Action taken by '%s'", comms.message, comms.username);
                 while(user_ptr != NULL)
                 {
                     if(user_ptr->PID == comms.PID)
@@ -437,6 +443,7 @@ void *frontendComms(void *structThreadCredentials)
                 }
             }
             else if(strcmp(comms.message, "add") == 0){
+                printf("\n\n\t[~] '%s' Action taken by '%s'\n", comms.message, comms.username);
                 while(user_ptr != NULL)
                 {
                     if(user_ptr->PID == comms.PID)
@@ -465,8 +472,108 @@ void *frontendComms(void *structThreadCredentials)
                 }
                 close(fd);
             }
+            else if (strcmp(comms.message, "sell") == 0)
+            {
+                printf("\n\n\t[~] '%s' Action taken by '%s'\n", comms.message, comms.username);
+                int fd = open (BACKEND_FIFO_FRONTEND, O_RDONLY);
+                if (fd == -1)
+                {
+                    printf("\n[!] Error while opening pipe BACKEND_FIFO_FRONTEND\n");
+                    exit(EXIT_FAILURE);
+                }
+                int size = read(fd, &it, sizeof(it));
+                if (size == -1)
+                {
+                    printf("\n[!] Error while reading from pipe BACKEND_FIFO_FRONTEND\n");
+                    exit(EXIT_FAILURE);
+                }
+                close(fd);
+                pthread_mutex_lock(backend_ptr->mutex);
+                int id = 0;
+                while(item_ptr != NULL)
+                {
+                    if(item_ptr->id == 0)
+                    {
+                        item_ptr->id = id + 1;
+                        it.id = item_ptr->id;
+                        strcpy(item_ptr->name, it.name);
+                        strcpy(item_ptr->category, it.category);
+                        item_ptr->basePrice = it.basePrice;
+                        item_ptr->buyNowPrice = it.buyNowPrice;
+                        item_ptr->duration = it.duration;
+                        strcpy(item_ptr->sellingUser, it.sellingUser);
+                        strcpy(item_ptr->highestBidder, it.highestBidder);
+                        item_ptr->bought = it.bought;
 
-            printf("\n\n[~] Message from %s: %s\n", comms.username, comms.message); // Debug
+                        // Send int with the id of the item to the frontend
+                        sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, comms.PID);
+                        int fd2 = open(FRONTEND_FINAL_FIFO, O_WRONLY);
+                        if (fd2 == -1)
+                        {
+                            printf("\n[!] Error while opening pipe FRONTEND_FIFO\n");
+                            exit(EXIT_FAILURE);
+                        }
+                        printf("\t[~] Item '%s' added to the database with ID %d\n", it.name, it.id);
+                        int size2 = write(fd2, &it, sizeof(it));
+                        if (size2 == -1)
+                        {
+                            printf("\n[!] Error while writing to pipe FRONTEND_FIFO\n");
+                            exit(EXIT_FAILURE);
+                        }
+                        close(fd2);
+                        pthread_mutex_unlock(backend_ptr->mutex);
+
+                        break;
+                    }else{
+                        id = item_ptr->id;
+                    }
+                    item_ptr = item_ptr->next;
+                }
+            }
+            else if(strcmp(comms.message, "list") == 0){
+                printf("\n\n\t[~] '%s' Action taken by '%s'\n", comms.message, comms.username);
+                pthread_mutex_lock(backend_ptr->mutex);
+                // While item_ptr->id != 0, send the item to the frontend. Last item will have id = -1
+                while(item_ptr != NULL)
+                {
+                    if(item_ptr->id != 0)
+                    {
+                        sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, comms.PID);
+                        int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
+                        if (fd == -1)
+                        {
+                            printf("\n[!] Error while opening pipe FRONTEND_FIFO\n");
+                            exit(EXIT_FAILURE);
+                        }
+                        int size2 = write(fd, item_ptr, sizeof(Item));
+                        if (size2 == -1)
+                        {
+                            printf("\n[!] Error while writing to pipe FRONTEND_FIFO\n");
+                            exit(EXIT_FAILURE);
+                        }
+                        close(fd);
+                    }
+                    item_ptr = item_ptr->next;
+                }
+                // Something is wrong here. Sometimes the last item is not sent to the frontend
+                Item end;
+                end.id = -1;
+                sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, comms.PID);
+                int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
+                if (fd == -1)
+                {
+                    printf("\n[!] Error while opening pipe FRONTEND_FIFO\n");
+                    exit(EXIT_FAILURE);
+                }
+                int size2 = write(fd, &end, sizeof(Item));
+                if (size2 == -1)
+                {
+                    printf("\n[!] Error while writing to pipe FRONTEND_FIFO\n");
+                    exit(EXIT_FAILURE);
+                }
+                close(fd);
+                pthread_mutex_unlock(backend_ptr->mutex);
+            }
         }
     }
     pthread_exit((void *)NULL);
@@ -697,6 +804,7 @@ int main(int argc, char **argv)
     }
 
     structThreadCredentials.user = &usr;
+    structThreadCredentials.item = &itm;
 
     if (pthread_create(&threadCredentials, NULL, verifyCredentials, &structThreadCredentials) != 0)
         perror("Error creating thread");

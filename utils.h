@@ -22,6 +22,7 @@ char FRONTEND_FINAL_FIFO[50];
 typedef struct structThreadCredentials{
     struct backend *backend;
     struct user *user;
+    struct item *item;
 }StructThreadCredentials;
 
 typedef struct backend{
@@ -57,6 +58,7 @@ typedef struct item{
     int duration;
     char sellingUser[20];
     char highestBidder[20]; 
+    int bought;
     struct item *next;
 }Item;
 
