@@ -1,6 +1,5 @@
 #include "utils.h"
 
-int signalreceived; // flag
 int sell(char itemName[], char category[], int basePrice, int buyNowPrice, int duration, char sellerUsername[])
 {
     Item item;
@@ -76,10 +75,10 @@ void list()
         printf("\t[~] Buy Now Price: %d\n", item.buyNowPrice);
         printf("\t[~] Duration: %d\n", item.duration);
         printf("\t[~] Seller: %s\n", item.sellingUser);
-        if(strcmp(item.highestBidder, "N/A") != 0)
+        if (strcmp(item.highestBidder, "N/A") != 0)
             printf("\t[~] Highest Bidder: %s\n", item.highestBidder);
         printf("\n\t[~] ----------------------------\n");
-        
+
         memset(&item, 0, sizeof(Item));
 
         fd = open(FRONTEND_FINAL_FIFO, O_RDONLY);
@@ -152,9 +151,50 @@ void quit()
     sleep(1);
     exit(EXIT_SUCCESS);
 }
+void quit2()
+{
+    printf("\n[!] Exiting...\n\n");
+    unlink(FRONTEND_FINAL_FIFO);
+    sleep(1);
+    exit(EXIT_SUCCESS);
+}
 void clear()
 {
     system("clear");
+}
+void imAlive()
+{
+
+    printf("hello?");
+
+    Comms comms;
+    comms.PID = getpid();
+    sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, getpid());
+    int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
+    if (fd == -1)
+    {
+        printf("\nError communicating it's alive");
+        quit();
+    }
+    int answer = 1;
+    int size = write(fd, &answer, sizeof(int));
+    if (size == -1)
+    {
+        printf("\nError communicating it's alive");
+        quit();
+    }
+    close(fd);
+}
+void *threadAlive(void *user_ptr)
+{
+    int heartbeat = atoi(getenv("HEARTBEAT"));
+    sleep(heartbeat);
+    // Waiting for signal SIGUSR2 from backend and then sending alive signal SIGUSR1
+    while (1)
+    {
+        signal(SIGUSR2, imAlive);
+    }
+    pthread_exit((void *)NULL);
 }
 void *frontendCommandReader(void *user_ptr)
 {
@@ -474,6 +514,7 @@ int main(int argc, char **argv)
     signal(SIGINT, quit);
     signal(SIGUSR1, receiveSignal);
     pthread_t threadBackendComms;
+    pthread_t threadImAlive;
 
     if (backendOn())
     {
@@ -535,25 +576,25 @@ int main(int argc, char **argv)
     {
         printf("\n[!] Wrong password!\n");
         sleep(1);
-        quit();
+        quit2();
     }
     else if (success == 0)
     {
         printf("\n[!] User doesn't exist!\n");
         sleep(1);
-        quit();
+        quit2();
     }
     else if (success == 2)
     {
         printf("\n[!] User already logged in!\n");
         sleep(1);
-        quit();
+        quit2();
     }
     else if (success == -2)
     {
         printf("\n[!] Max number of users reached!\n");
         sleep(1);
-        quit();
+        quit2();
     }
 
     if (pthread_create(&threadBackendComms, NULL, frontendCommandReader, &user) != 0)
@@ -561,7 +602,13 @@ int main(int argc, char **argv)
         perror("Error creating thread");
     }
 
+    /*if (pthread_create(&threadImAlive, NULL, threadAlive, &user) != 0)
+    {
+        perror("Error creating thread to communicate its alive");
+    }*/
+
     pthread_join(threadBackendComms, NULL);
+    //pthread_join(threadImAlive, NULL);
 
     return 0;
 }

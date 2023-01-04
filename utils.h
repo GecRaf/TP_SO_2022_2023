@@ -23,6 +23,7 @@ typedef struct structThreadCredentials{
     struct backend *backend;
     struct user *user;
     struct item *item;
+    struct promotor *promotor;
 }StructThreadCredentials;
 
 typedef struct backend{
@@ -63,10 +64,12 @@ typedef struct item{
 }Item;
 
 typedef struct promotor{
-    char path[20];
+    char path[100];
     char category[20];
     int discount;
     int duration;
+    int active;
+    int threadID;
     struct promotor *next;
 }Promotor;
 
