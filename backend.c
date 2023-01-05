@@ -686,39 +686,66 @@ void *verifyCredentials(void *structThreadCredentials)
 void *verifyUserAlive(void *structThreadCredentials)
 {
     StructThreadCredentials *structThreadCredentials_ptr = (StructThreadCredentials *)structThreadCredentials;
-    User user;
+    User *user_ptr = structThreadCredentials_ptr->user;
     printf("\n[~] Function VerifyUserAlive\n");
+    int rec=0;
     int fd = open(ALIVE_FIFO, O_RDWR);
     if(fd==-1)
     {
         printf("\nError opening reading FIFO");
         return NULL;
     }
-    printf("chegou");
+    printf("\n[~] Function verifying heartbeat has started[~]\n");
     while(1){
-       // User *user_ptr = structThreadCredentials_ptr->user;
+       
         int i=0;
-        int rec;
+        
         int size= read(fd, &rec, sizeof(rec));
-       // printf("--size-- %d", size);
+     
         if(size > 0)
-        { /*
-            while(user_ptr != 0)
+        {
+            while(user_ptr!=NULL)
             {
-                if(user_ptr[i].PID == rec)
-                {
-                    printf("User %s is alive", user_ptr[i].username);
+                if(user_ptr[i].PID == rec){
+                 printf("User with pid[%d] is Alive\n", rec);
+                 user_ptr[i].heartbeating = 1;
                 }
+                printf("Incrementa i");
                 i++;
-            }*/
-            printf("User with pid[%d] is Alive\n", rec);
+            }
         }
+        else{
+            printf("<!!> Received nothing from isAlive\n");
+        }
+        
     }
+    sleep(3);
+    printf("wait para not heart");
+   user_ptr[0].heartbeating = 0;
 }
+
 
 void *removeUserNotAlive(void *structThreadCredentials)
 {
-
+    int i=0;
+    StructThreadCredentials *structThreadCredentials_ptr = (StructThreadCredentials *)structThreadCredentials;
+    User *user_ptr = structThreadCredentials_ptr->user;
+    while(1)
+    {
+        sleep(10);
+        while(user_ptr!= NULL){
+            if(user_ptr[i].loggedIn == user_ptr[i].heartbeating)
+            {
+                printf("Still alive");
+                return NULL;
+            }
+        i++;
+        }
+    }
+    kill(user_ptr->PID, SIGINT);
+    printf("\n\t[~] User '%s' kicked, heartbeat not sent\n\n", user_ptr[i].username);
+    // Put the user loggedIn to 0
+    user_ptr->loggedIn = 0;
 }
 
 void sendSignal(int s, siginfo_t *info, void *v)
@@ -890,7 +917,9 @@ int main(int argc, char **argv)
 
     pthread_join(threadCredentials, NULL);
     pthread_join(threadFrontendComms, NULL);
+
     pthread_join(verifyAlive, NULL);
+    sleep(3);
     pthread_join(removeNotAlive, NULL);
     pthread_mutex_destroy(&mutex);
 

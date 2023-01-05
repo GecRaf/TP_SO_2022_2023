@@ -39,6 +39,7 @@ typedef struct user{
     char password[20];
     int balance;
     int PID;
+    int heartbeating;
     int loggedIn;
     struct user *next;
 }User;
@@ -70,5 +71,7 @@ typedef struct promotor{
     int duration;
     struct promotor *next;
 }Promotor;
+
+
 
 #endif // !BACKHEND_H
