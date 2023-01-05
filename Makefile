@@ -4,7 +4,9 @@
 
 # Flags to be included CFLAGS = -Wall -Werror -Wextra
 
-all: Frontend Backend
+all: Clean Main
+
+Main: Frontend Backend
 
 Frontend: frontend.c
 	gcc -pthread -o Frontend frontend.c

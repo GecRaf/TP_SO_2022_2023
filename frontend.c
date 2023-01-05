@@ -71,8 +71,10 @@ void list()
         printf("\n\t[~] Item %d\n", item.id);
         printf("\t[~] Name: %s\n", item.name);
         printf("\t[~] Category: %s\n", item.category);
+        printf("\t[~] BOUGHT: %d\n", item.bought);
         printf("\t[~] Base Price: %d\n", item.basePrice);
         printf("\t[~] Buy Now Price: %d\n", item.buyNowPrice);
+        printf("\t[~] Highest bid: %d\n", item.highestBid);
         printf("\t[~] Duration: %d\n", item.duration);
         printf("\t[~] Seller: %s\n", item.sellingUser);
         if (strcmp(item.highestBidder, "N/A") != 0)
@@ -97,34 +99,10 @@ void list()
     }
     printf("\n");
 }
-void licat(char category[])
-{
-    printf("\ncategory: %s\n\n", category);
-}
-void lisel(char sellerUsername[])
-{
-    printf("\nsellerUsername: %s\n\n", sellerUsername);
-}
-void lival(int maxPrice)
-{
-    printf("\nmaxPrice: %d\n\n", maxPrice);
-}
-void litime(int duration)
-{
-    printf("\nduration: %d\n\n", duration);
-}
 void currentTime(){
     time_t t = time(NULL);
     struct tm tm = *localtime(&t);
     printf("\n\t[~] Current time: %d-%d-%d %d:%d:%d\n\n", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-}
-void buy(int id, int value)
-{
-    printf("\nid: %d\nvalue: %d\n\n", id, value);
-}
-void add(int value)
-{
-    printf("\nvalue: %d\n\n", value);
 }
 void quit()
 {
@@ -295,13 +273,14 @@ void *frontendCommandReader(void *user_ptr)
                 continue;
             }
             strcpy(comms.message, cmd);
+            strcpy(comms.argument, arg);
             int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
                 printf("\n\t[!] Error writing to backend fifo\n\n");
                 exit(EXIT_FAILURE);
             }
-            licat(arg); // Lists available per category
+            list(); // Lists available per category
         }
         else if (strcmp(cmd, "lisel") == 0)
         {
@@ -312,13 +291,14 @@ void *frontendCommandReader(void *user_ptr)
                 continue;
             }
             strcpy(comms.message, cmd);
+            strcpy(comms.argument, arg);
             int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
                 printf("\n\t[!] Error writing to backend fifo\n\n");
                 exit(EXIT_FAILURE);
             }
-            lisel(arg); // Lists specific seller items
+            list(); // Lists specific seller items
         }
         else if (strcmp(cmd, "lival") == 0)
         {
@@ -330,13 +310,14 @@ void *frontendCommandReader(void *user_ptr)
                 continue;
             }
             strcpy(comms.message, cmd);
+            comms.balance = value;
             int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
                 printf("\n\t[!] Error writing to backend fifo\n\n");
                 exit(EXIT_FAILURE);
             }
-            lival(value); // Lists items until a certain price range
+            list(); // Lists items until a certain price range
         }
         else if (strcmp(cmd, "litime") == 0)
         {
@@ -348,13 +329,14 @@ void *frontendCommandReader(void *user_ptr)
                 continue;
             }
             strcpy(comms.message, cmd);
+            comms.balance = atoi(arg);
             int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
                 printf("\n\t[!] Error writing to backend fifo\n\n");
                 exit(EXIT_FAILURE);
             }
-            litime(duration); // Lists available until a certain hour
+            list(); // Lists available until a certain hour
         }
         else if (strcmp(cmd, "time") == 0)
         {
@@ -379,13 +361,42 @@ void *frontendCommandReader(void *user_ptr)
                 continue;
             }
             strcpy(comms.message, cmd);
+            comms.balance = value;
+            comms.buyID = id;
+
             int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
                 printf("\n\t[!] Error writing to backend fifo\n\n");
                 exit(EXIT_FAILURE);
             }
-            buy(id, value); // Lists active promotors
+            sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, pid);
+            int fd2 = open(FRONTEND_FINAL_FIFO, O_RDONLY);
+            if (fd2 == -1)
+            {
+                printf("\n\t[!] Error opening frontend fifo\n\n");
+                exit(EXIT_FAILURE);
+            }
+            // Read from frontend fifo
+            int size2 = read(fd2, &comms, sizeof(comms));
+            if (size2 == -1)
+            {
+                printf("\n\t[!] Error reading from frontend fifo\n\n");
+                exit(EXIT_FAILURE);
+            }
+            if(comms.buyID == 1){
+                printf("\n\t[!] You don't have enough money to buy the item with ID: '%d'\n\n", id);
+            }
+            else if(comms.buyID == 2){
+                printf("\n\t[!] Successfully bought the item with ID: '%d'\n\n", id);
+            }
+            else if(comms.buyID == 3){
+                printf("\n\t[!] Successfully bidded '%d' euros for the item with ID: '%d'\n\n", value, id);
+            }
+            else if(comms.buyID == 4){
+                printf("\n\t[!] Bidding value is too low! Minimum bid: %d\n\n", comms.balance);
+            }
+            close(fd2);
         }
         else if (strcmp(cmd, "cash") == 0)
         {

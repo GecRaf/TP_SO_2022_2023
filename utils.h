@@ -46,7 +46,9 @@ typedef struct user{
 typedef struct comms{
     char username[20];
     char message[100];
+    char argument[100];
     int balance;
+    int buyID;
     int PID;
 }Comms;
 
@@ -57,6 +59,7 @@ typedef struct item{
     int basePrice; 
     int buyNowPrice;
     int duration;
+    int highestBid;
     char sellingUser[20];
     char highestBidder[20]; 
     int bought;

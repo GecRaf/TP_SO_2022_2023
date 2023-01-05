@@ -4,6 +4,37 @@
 int pipeBP[2], pipePB[2];
 int threadCounter = 0;
 
+// Exclusivly to kill frontend processes in case of SIGINT
+int frontendPIDArrayIndex = 0;
+int frontendPIDArray[10];
+
+void quitPromotor()
+{
+    close(pipePB[0]);
+    // pthread_exit((void*) NULL);
+    // pthread_join(thread, NULL);
+    //  kill(pid, SIGUSR2); // Not understood
+}
+void quit(void *user)
+{
+    User *usr = (User *)user;
+    printf("\n\t[!] Closing...\n\n");
+
+    while (usr != NULL)
+    {
+        if (usr->loggedIn == 1)
+        {
+            kill(usr->PID, SIGUSR1);
+        }
+        usr = usr->next;
+    }
+
+    unlink(BACKEND_FIFO);
+    unlink(BACKEND_FIFO_FRONTEND);
+    quitPromotor();
+    sleep(1);
+    exit(EXIT_SUCCESS);
+}
 void listUsers(void *user)
 {
     FILE *f;
@@ -11,13 +42,13 @@ void listUsers(void *user)
     char *usersFile = getenv("FUSERS");
     if (loadUsersFile(usersFile) == -1)
     {
-        printf("\n[!] Error while loading users file\n");
-        exit(EXIT_FAILURE);
+        printf("\n\t[!] Error while loading users file\n");
+        quit(NULL);
     }
     else
     {
-        printf("\n[~] Successuflly loaded file ' users '\n");
-        printf("\n[~] Successuflly read %d users\n", loadUsersFile(usersFile));
+        printf("\n\t[~] Successuflly loaded file ' users '\n");
+        printf("\n\t[~] Successuflly read %d users\n", loadUsersFile(usersFile));
     }
 
     int maxUsers = atoi(getenv("MAX_USERS"));
@@ -27,8 +58,8 @@ void listUsers(void *user)
     f = fopen(usersFile, "r");
     if (f == NULL)
     {
-        printf("\n[!] Error while opening file ' users '\n");
-        exit(EXIT_FAILURE);
+        printf("\n\t[!] Error while opening file ' users '\n");
+        quit(NULL);
     }
     for (int i = 0; i < maxUsers; i++)
     {
@@ -64,7 +95,7 @@ void list(void *item)
     while (it != NULL)
     {
         if (strcmp(it->name, "") != 0)
-            printf("\n\t\t[~] ID: %d\n\t\t[~] Name: %s\n\t\t[~] Category: %s\n\t\t[~] Base Price: %d\n\t\t[~] Buy Now Price: %d\n\t\t[~] Selling User: %s\n\t\t[~] Highest Bidder: %s\n", it->id, it->name, it->category, it->basePrice, it->buyNowPrice, it->sellingUser, it->highestBidder);
+            printf("\n\t\t[~] ID: %d\n\t\t[~] Name: %s\n\t\t[~] Category: %s\n\t\t[~] Base Price: %d\n\t\t[~] Buy Now Price: %d\n\t\t[~] Higgest Bid: %d\n\t\t[~] Selling User: %s\n\t\t[~] Highest Bidder: %s\n", it->id, it->name, it->category, it->basePrice, it->buyNowPrice, it->highestBid, it->sellingUser, it->highestBidder);
         it = it->next;
     }
     printf("\n");
@@ -106,8 +137,6 @@ void *promotorComms(void *vargp)
 
     char *promotorsExecutablesPath = vargp;
 
-    printf("\n[~] Promotor '%s' launched!\n", promotorsExecutablesPath);
-
     int estado, num;
     pipe(pipeBP);
     pipe(pipePB);
@@ -126,7 +155,7 @@ void *promotorComms(void *vargp)
         if (execl(promotorsExecutablesPath, promotorsExecutablesPath, NULL) == -1)
         {
             printf("\n[!] Error while executing ' promotor_oficial '\n");
-            exit(EXIT_FAILURE);
+            quit(NULL);
         }
     }
     else
@@ -183,8 +212,8 @@ void readPromoters(void *prt)
     f = fopen(promotersFile, "r");
     if (f == NULL)
     {
-        printf("\n[!] Error while opening file %s\n", promotersFile);
-        exit(EXIT_FAILURE);
+        printf("\n\t[!] Error while opening file %s\n", promotersFile);
+        quit(NULL);
     }
 
     Promotor *promotor_ptr = (Promotor *)prt;
@@ -225,23 +254,43 @@ void launchPromotersThreads(void *structThreadCredentials, pthread_t *threadProm
 
     while (threadCounter != 0)
     {
-        if (strcmp(prt->path, "") != 0 && prt->active == 0)
+        if (strcmp(prt->path, "") != 0 && (prt->active == 0 || prt->active == 2))
         {
             if (pthread_create(&threadPromotor[threadCounter], NULL, promotorComms, &prt->path) != 0)
                 perror("Error creating thread");
-            printf("\n[+] Promotor thread created '%s'\n", prt->path);
+            printf("\n\t[+] Promotor thread created '%s'\n", prt->path);
             prt->active = 1;
             prt->threadID = threadCounter;
         }
-        else if (strcmp(prt->path, "") != 0 && prt->active == 1)
+        else if (strcmp(prt->path, "") != 0 && prt->active == 3)
         {
-            // Kill thread
-            if (pthread_kill(threadPromotor[prt->threadID], SIGUSR1) != 0)
+            if (pthread_kill(threadPromotor[prt->threadID], SIGUSR2) != 0)
                 perror("Error killing thread");
-            printf("\n[+] Promotor thread killed '%s'\n", prt->path);
+            printf("\n\t[+] Promotor thread killed '%s'\n", prt->path);
         }
         prt = prt->next;
         threadCounter--;
+    }
+}
+void debugPromotores(void *structThreadCredentials)
+{
+    // Print all existing promotors and details
+    StructThreadCredentials *mainStruct = (StructThreadCredentials *)structThreadCredentials;
+    Promotor *prt = (Promotor *)mainStruct->promotor;
+    int maxPromotors = atoi(getenv("MAX_PROMOTORS"));
+
+    for (int i = 0; i < maxPromotors; i++)
+    {
+        if (strcmp(prt->path, "") != 0)
+        {
+            printf("\n[~] Promotor %d: %s\n", i, prt->path);
+            printf("\t[~] Category: %s\n", prt->category);
+            printf("\t[~] Discount: %d\n", prt->discount);
+            printf("\t[~] Duration: %d\n", prt->duration);
+            printf("\t[~] Active: %d\n", prt->active);
+            printf("\t[~] Thread ID: %d\n", prt->threadID);
+        }
+        prt = prt->next;
     }
 }
 void prom(void *promotor)
@@ -260,6 +309,7 @@ void prom(void *promotor)
 }
 void reprom(void *structThreadCredentials, pthread_t *threadPromotor)
 {
+    // Sometimes it's working, sometimes it's not
     StructThreadCredentials *mainStruct = (StructThreadCredentials *)structThreadCredentials;
     Promotor *prt = (Promotor *)mainStruct->promotor;
     int maxPromotors = atoi(getenv("MAX_PROMOTORS"));
@@ -270,71 +320,83 @@ void reprom(void *structThreadCredentials, pthread_t *threadPromotor)
     if (f == NULL)
     {
         printf("\n[!] Error while opening file %s\n", promotersFile);
-        exit(EXIT_FAILURE);
+        quit(NULL);
     }
 
     // Print file line by line
     char line[100];
-    printf("\n\t[~] List of promoters:\n");
-    while (fgets(line, sizeof(line), f))
+    int newPromotors = 0;
+    printf("\n\t[~] List of new promoters:\n");
+    while (fscanf(f, "%s", line) == 1)
     {
         prt = (Promotor *)mainStruct->promotor;
         char prefix[100] = "txt/";
         strcat(prefix, line);
         strcpy(line, prefix);
-        printf("\n\t\t[~] %s", line);
+        line[strcspn(line, "\n")] = 0;
 
-        while(prt != NULL)
+        int flag = 0;
+        for (int i = 0; i < maxPromotors; i++)
         {
             if (strcmp(prt->path, line) == 0)
             {
-                printf("\t\t\t[~] Já existe\n");
-                break;
-            }
-            else if(strcmp(prt->path, "") == 0)
-            {
-                strcpy(prt->path, line);
+                flag = 1;
                 prt->active = 1;
-                if (pthread_create(&threadPromotor[maxPromotors], NULL, promotorComms, &prt->path) != 0)
-                    perror("Error creating thread");
-                printf("\n[+] Promotor thread created '%s'\n", prt->path);
-                prt->threadID = maxPromotors;
                 break;
             }
             prt = prt->next;
         }
-    }
-    printf("\n");
-}
-void cancelPromotor(char path[])
-{
-}
-void quitPromotor()
-{
-    close(pipePB[0]);
-    // pthread_exit((void*) NULL);
-    // pthread_join(thread, NULL);
-    //  kill(pid, SIGUSR2); // Not understood
-}
-void quit(void *user)
-{
-    User *usr = (User *)user;
-    printf("\n[!] Closing...\n\n");
-
-    while (usr != NULL)
-    {
-        if (usr->loggedIn == 1)
+        if (flag == 0)
         {
-            kill(usr->PID, SIGUSR1);
+            prt = (Promotor *)mainStruct->promotor;
+            for (int j = 0; j < maxPromotors; j++)
+            {
+                if (strcmp(prt->path, "") == 0)
+                {
+                    strcpy(prt->path, line);
+                    prt->active = 2;
+                    printf("\n\t[+] Promotor added '%s'\n", prt->path);
+                    threadCounter++;
+                    newPromotors++;
+                    break;
+                }
+                prt = prt->next;
+            }
         }
-        usr = usr->next;
     }
+    if (newPromotors == 0)
+        printf("\n\t[!] No new promoters found\n");
+    fclose(f);
+    printf("\n");
+    prt = (Promotor *)mainStruct->promotor; // Is this really necessary?
+    launchPromotersThreads(structThreadCredentials, threadPromotor);
+}
+void cancelPromotor(void *structThreadCredentials, pthread_t *threadPromotor, char path[])
+{
+    // Search in the struct promotor for the path and get the threadID and kill it
+    StructThreadCredentials *mainStruct = (StructThreadCredentials *)structThreadCredentials;
+    Promotor *prt = (Promotor *)mainStruct->promotor;
 
-    unlink(BACKEND_FIFO);
-    unlink(BACKEND_FIFO_FRONTEND);
-    quitPromotor();
-    sleep(1);
-    exit(EXIT_SUCCESS);
+    int notFound = 0;
+
+    while (prt != NULL)
+    {
+        if (strcmp(prt->path, path) == 0)
+        {
+            // TODO: Kill thread without crashing the program
+            if (pthread_kill(threadPromotor[prt->threadID], SIGUSR2) != 0)
+                perror("Error killing thread");
+            printf("\n\t[+] Promotor thread killed '%s'\n", prt->path);
+            prt->active = 0;
+            notFound = 1;
+            break;
+        }
+        prt = prt->next;
+    }
+    if (notFound == 0){
+        printf("\n\t[!] Path not found\n");
+        printf("\n\t[!] Use command <prom> to see the active promoters\n\n");
+    }  
 }
 void clear()
 {
@@ -367,8 +429,8 @@ void backendCommandReader(void *structThreadCredentials, pthread_t *threadPromot
         {
             if (!(strcmp(arg, "") == 0))
             {
-                printf("\n[!] Invalid notation for command ' users '\n");
-                printf("[!] No arguments needed\n");
+                printf("\n\t[!] Invalid notation for command ' users '\n");
+                printf("\t[!] No arguments needed\n");
                 continue;
             }
             loggedIn(usr); // Lists users using the platform ATM
@@ -377,8 +439,8 @@ void backendCommandReader(void *structThreadCredentials, pthread_t *threadPromot
         {
             if (!(strcmp(arg, "") == 0))
             {
-                printf("\n[!] Invalid notation for command ' list '\n");
-                printf("[!] No arguments needed\n");
+                printf("\n\t[!] Invalid notation for command ' list '\n");
+                printf("\t[!] No arguments needed\n");
                 continue;
             }
             list(it); // Lists available items
@@ -387,8 +449,8 @@ void backendCommandReader(void *structThreadCredentials, pthread_t *threadPromot
         {
             if (strcmp(arg, "") == 0)
             {
-                printf("\n[!] Invalid notation for command ' kick '\n");
-                printf("[~] Use the following notation: 'kick <username>'\n");
+                printf("\n\t[!] Invalid notation for command ' kick '\n");
+                printf("\t[~] Use the following notation: 'kick <username>'\n");
                 continue;
             }
             kick(arg, usr); // Kicks certain user by the username stored in "arg"
@@ -398,8 +460,8 @@ void backendCommandReader(void *structThreadCredentials, pthread_t *threadPromot
         {
             if (!(strcmp(arg, "") == 0))
             {
-                printf("\n[!] Invalid notation for command ' prom '\n");
-                printf("[!] No arguments needed\n");
+                printf("\n\t[!] Invalid notation for command ' prom '\n");
+                printf("\t[!] No arguments needed\n");
                 continue;
             }
             prom(prt); // Lists active promotors
@@ -408,29 +470,28 @@ void backendCommandReader(void *structThreadCredentials, pthread_t *threadPromot
         {
             if (!(strcmp(arg, "") == 0))
             {
-                printf("\n[!] Invalid notation for command ' reprom '\n");
-                printf("[!] No arguments needed\n");
+                printf("\n\t[!] Invalid notation for command ' reprom '\n");
+                printf("\t[!] No arguments needed\n");
                 continue;
             }
-            reprom(mainStruct, threadPromotor); // Refresh active promotors
-            // Reads the promotors file again, removes no longer present promotors and adds new ones
+            reprom(mainStruct, threadPromotor);
         }
         else if (strcmp(cmd, "cancel") == 0)
         {
             if (strcmp(arg, "") == 0)
             {
-                printf("\n[!] Invalid notation for command ' cancel '\n");
-                printf("[~] Use the following notation: 'cancel <promotors-executable-filename>'\n");
+                printf("\n\t[!] Invalid notation for command ' cancel '\n");
+                printf("\t[~] Use the following notation: 'cancel <promotors-executable-filename>'\n\n");
                 continue;
             }
-            cancelPromotor(arg); // Cancels promotor
+            cancelPromotor(mainStruct, threadPromotor, arg); // Cancels promotor
         }
         else if (strcmp(cmd, "close") == 0)
         {
             if (!(strcmp(arg, "") == 0))
             {
-                printf("\n[!] Invalid notation for command ' close '\n");
-                printf("[!] No arguments needed\n");
+                printf("\n\t[!] Invalid notation for command ' close '\n");
+                printf("\t[!] No arguments needed\n");
                 continue;
             }
             quit(usr); // Needs to assure closing of possible open pipes and threads
@@ -439,27 +500,27 @@ void backendCommandReader(void *structThreadCredentials, pthread_t *threadPromot
         {
             if (!(strcmp(arg, "") == 0))
             {
-                printf("\n[!] Invalid notation for command ' clear '\n");
-                printf("[!] No arguments needed\n");
+                printf("\n\t[!] Invalid notation for command ' clear '\n");
+                printf("\t[!] No arguments needed\n");
                 continue;
             }
             clear();
         }
         else if (strcmp(cmd, "help") == 0)
         {
-            printf("\t\n[!] Available commands:\n");
-            printf("[~] users || Lists users using the platform\n");
-            printf("[~] list || Lists available items\n");
-            printf("[~] kick <username> || Kicks a certain user\n");
-            printf("[~] prom || Lists active promotors\n");
-            printf("[~] reprom || Refresh active promotors\n");
-            printf("[~] cancel <promotors-executable-filename> || Cancels promotor\n");
-            printf("[~] close || Closes platform\n");
-            printf("[~] clear || Console clear\n\n");
+            printf("\n\t\t[!] Available commands:\n");
+            printf("\t[~] users || Lists users using the platform\n");
+            printf("\t[~] list || Lists available items\n");
+            printf("\t[~] kick <username> || Kicks a certain user\n");
+            printf("\t[~] prom || Lists active promotors\n");
+            printf("\t[~] reprom || Refresh active promotors\n");
+            printf("\t[~] cancel <promotors-executable-filename> || Cancels promotor\n");
+            printf("\t[~] close || Closes platform\n");
+            printf("\t[~] clear || Console clear\n\n");
         }
         else
         {
-            printf("\t[!] Command not found: '%s' (For help type: 'help')\n\n", cmd);
+            printf("\n\t[!] Command not found: '%s' (For help type: 'help')\n\n", cmd);
         }
     }
 }
@@ -477,27 +538,27 @@ void readItemsFile(void *item)
     if (f == NULL)
     {
         printf("\n[!] Error while opening the file ' items '\n");
-        exit(EXIT_FAILURE);
+        quit(NULL);
     }
     else
     {
-        printf("\n[~] Successuflly loaded file ' items '\n");
+        printf("\n\t[~] Successuflly loaded file ' items '\n");
     }
 
     int count = 0;
 
     for (int i = 0; i < maxItems; i++)
     {
-        // 1 sapatilhas desporto 50 30 100
         if (fscanf(f, "%d %s %s %d %d %d", &it->id, it->name, it->category, &it->basePrice, &it->buyNowPrice, &it->duration) == 6)
             count++;
         strcpy(it->highestBidder, "N/A");
         strcpy(it->sellingUser, "N/A");
+        it->highestBid = 0;
         it->next = (Item *)malloc(sizeof(Item));
         it = it->next;
     }
 
-    printf("\n[~] Successuflly read %d items\n", count);
+    printf("\n\t[~] Successuflly read %d items\n", count);
 
     fclose(f);
 }
@@ -522,8 +583,8 @@ void *frontendComms(void *structThreadCredentials)
     int fd = open(BACKEND_FIFO_FRONTEND, O_RDONLY);
     if (fd == -1)
     {
-        printf("\n[!] Error while opening pipe BACKEND_FIFO_FRONTEND\n");
-        exit(EXIT_FAILURE);
+        printf("\n\r[!] Error while opening pipe BACKEND_FIFO_FRONTEND\n");
+        quit(NULL);
     }
 
     while (1)
@@ -551,6 +612,121 @@ void *frontendComms(void *structThreadCredentials)
                     user_ptr = user_ptr->next;
                 }
             }
+            else if (strcmp(comms.message, "buy") == 0)
+            {
+                printf("\n\n\t[~] '%s' Action taken by '%s'", comms.message, comms.username);
+                while (user_ptr != NULL)
+                {
+                    if (user_ptr->PID == comms.PID)
+                    {
+                        if (user_ptr->balance < comms.balance)
+                        {
+                            printf("\n\n\t[!] User '%s' doesn't have enough balance to buy item with ID '%d'", comms.username, comms.buyID);
+                            comms.buyID = 1;
+                            sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, comms.PID);
+                            int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
+                            if (fd == -1)
+                            {
+                                printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                                quit(NULL);
+                            }
+                            int size2 = write(fd, &comms, sizeof(comms));
+                            if (size2 == -1)
+                            {
+                                printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                                quit(NULL);
+                            }
+                            close(fd);
+                            break;
+                        }
+                        else
+                        {
+                            // If the value offered by the user is equal to the buy now price, the item is sold
+                            // If the value offered by the user is equal or greater than the base price and the highest bidder, the bid is accepted and he becomes the highest bidder\
+
+                            while (item_ptr != NULL)
+                            {
+                                if (item_ptr->id == comms.buyID)
+                                {
+                                    if (comms.balance == item_ptr->buyNowPrice)
+                                    {
+
+                                        printf("\n\n\t[~] User '%s' bought item with ID '%d' for '%d' euros", comms.username, comms.buyID, comms.balance);
+                                        user_ptr->balance -= comms.balance;
+                                        strcpy(item_ptr->sellingUser, comms.username);
+                                        item_ptr->bought = 1;
+                                        comms.buyID = 2;
+                                        sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, comms.PID);
+                                        int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
+                                        if (fd == -1)
+                                        {
+                                            printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                                            quit(NULL);
+                                        }
+                                        int size2 = write(fd, &comms, sizeof(comms));
+                                        if (size2 == -1)
+                                        {
+                                            printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                                            quit(NULL);
+                                        }
+                                        close(fd);
+                                        break;
+                                    }
+                                    else if (comms.balance >= item_ptr->basePrice && comms.balance > item_ptr->highestBid)
+                                    {
+                                        printf("\n\n\t[~] User '%s' bid '%d' euros for item with ID '%d'", comms.username, comms.balance, comms.buyID);
+                                        item_ptr->highestBid = comms.balance;
+                                        strcpy(item_ptr->highestBidder, comms.username);
+                                        comms.buyID = 3;
+                                        sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, comms.PID);
+                                        int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
+                                        if (fd == -1)
+                                        {
+                                            printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                                            quit(NULL);
+                                        }
+                                        int size2 = write(fd, &comms, sizeof(comms));
+                                        if (size2 == -1)
+                                        {
+                                            printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                                            quit(NULL);
+                                        }
+                                        close(fd);
+                                        break;
+                                    }
+                                    else
+                                    {
+                                        if(item_ptr->highestBid > item_ptr->basePrice){
+                                            comms.balance = item_ptr->highestBid;
+                                        }else{
+                                            comms.balance = item_ptr->basePrice;
+                                        }
+                                        printf("\n\n\t[!] User '%s' bid '%d' euros for item with ID '%d' but it was rejected", comms.username, comms.balance, comms.buyID);
+                                        comms.buyID = 4;
+                                        sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, comms.PID);
+                                        int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
+                                        if (fd == -1)
+                                        {
+                                            printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                                            quit(NULL);
+                                        }
+                                        int size2 = write(fd, &comms, sizeof(comms));
+                                        if (size2 == -1)
+                                        {
+                                            printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                                            quit(NULL);
+                                        }
+                                        close(fd);
+                                        break;
+                                    }
+                                }
+                                item_ptr = item_ptr->next;
+                            }
+                        }
+                    }
+                    user_ptr = user_ptr->next;
+                }
+            }
             else if (strcmp(comms.message, "cash") == 0)
             {
                 printf("\n\n\t[~] '%s' Action taken by '%s'", comms.message, comms.username);
@@ -563,14 +739,14 @@ void *frontendComms(void *structThreadCredentials)
                         int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
                         if (fd == -1)
                         {
-                            printf("\n[!] Error while opening pipe FRONTEND_FIFO\n");
-                            exit(EXIT_FAILURE);
+                            printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                            quit(NULL);
                         }
                         int size2 = write(fd, &comms, sizeof(comms));
                         if (size2 == -1)
                         {
-                            printf("\n[!] Error while writing to pipe FRONTEND_FIFO\n");
-                            exit(EXIT_FAILURE);
+                            printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                            quit(NULL);
                         }
                         close(fd);
                         break;
@@ -597,15 +773,15 @@ void *frontendComms(void *structThreadCredentials)
                 int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
                 if (fd == -1)
                 {
-                    printf("\n[!] Error while opening pipe FRONTEND_FIFO\n");
-                    exit(EXIT_FAILURE);
+                    printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                    quit(NULL);
                 }
                 // Write comms to frontend
                 int size2 = write(fd, &comms, sizeof(comms));
                 if (size2 == -1)
                 {
-                    printf("\n[!] Error while writing to pipe FRONTEND_FIFO\n");
-                    exit(EXIT_FAILURE);
+                    printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                    quit(NULL);
                 }
                 close(fd);
             }
@@ -615,14 +791,14 @@ void *frontendComms(void *structThreadCredentials)
                 int fd = open(BACKEND_FIFO_FRONTEND, O_RDONLY);
                 if (fd == -1)
                 {
-                    printf("\n[!] Error while opening pipe BACKEND_FIFO_FRONTEND\n");
-                    exit(EXIT_FAILURE);
+                    printf("\n\t[!] Error while opening pipe BACKEND_FIFO_FRONTEND\n");
+                    quit(NULL);
                 }
                 int size = read(fd, &it, sizeof(it));
                 if (size == -1)
                 {
-                    printf("\n[!] Error while reading from pipe BACKEND_FIFO_FRONTEND\n");
-                    exit(EXIT_FAILURE);
+                    printf("\n\t[!] Error while reading from pipe BACKEND_FIFO_FRONTEND\n");
+                    quit(NULL);
                 }
                 close(fd);
                 pthread_mutex_lock(backend_ptr->mutex);
@@ -647,15 +823,15 @@ void *frontendComms(void *structThreadCredentials)
                         int fd2 = open(FRONTEND_FINAL_FIFO, O_WRONLY);
                         if (fd2 == -1)
                         {
-                            printf("\n[!] Error while opening pipe FRONTEND_FIFO\n");
-                            exit(EXIT_FAILURE);
+                            printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                            quit(NULL);
                         }
                         printf("\t[~] Item '%s' added to the database with ID %d\n", it.name, it.id);
                         int size2 = write(fd2, &it, sizeof(it));
                         if (size2 == -1)
                         {
-                            printf("\n[!] Error while writing to pipe FRONTEND_FIFO\n");
-                            exit(EXIT_FAILURE);
+                            printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                            quit(NULL);
                         }
                         close(fd2);
                         pthread_mutex_unlock(backend_ptr->mutex);
@@ -672,48 +848,211 @@ void *frontendComms(void *structThreadCredentials)
             else if (strcmp(comms.message, "list") == 0)
             {
                 printf("\n\n\t[~] '%s' Action taken by '%s'\n", comms.message, comms.username);
-                //pthread_mutex_lock(backend_ptr->mutex);
-                // While item_ptr->id != 0, send the item to the frontend. Last item will have id = -1
                 while (item_ptr != NULL)
                 {
-                    printf("\t[~] Item '%s' with ID %d sent to the frontend\n", item_ptr->name, item_ptr->id);
-                    if (item_ptr->id != 0)
+                    if (item_ptr->id != 0 && item_ptr->bought != 1)
                     {
                         sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, comms.PID);
                         int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
                         if (fd == -1)
                         {
-                            printf("\n[!] Error while opening pipe FRONTEND_FIFO\n");
-                            exit(EXIT_FAILURE);
+                            printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                            quit(NULL);
                         }
                         int size2 = write(fd, item_ptr, sizeof(Item));
                         if (size2 == -1)
                         {
-                            printf("\n[!] Error while writing to pipe FRONTEND_FIFO\n");
-                            exit(EXIT_FAILURE);
+                            printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                            quit(NULL);
                         }
                         close(fd);
                     }
                     item_ptr = item_ptr->next;
                 }
-                // Something is wrong here. Sometimes the last item is not sent to the frontend
                 Item end;
                 end.id = -1;
                 sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, comms.PID);
                 int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
                 if (fd == -1)
                 {
-                    printf("\n[!] Error while opening pipe FRONTEND_FIFO\n");
-                    exit(EXIT_FAILURE);
+                    printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                    quit(NULL);
                 }
                 int size2 = write(fd, &end, sizeof(Item));
                 if (size2 == -1)
                 {
-                    printf("\n[!] Error while writing to pipe FRONTEND_FIFO\n");
-                    exit(EXIT_FAILURE);
+                    printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                    quit(NULL);
                 }
                 close(fd);
-                //pthread_mutex_unlock(backend_ptr->mutex);
+            }
+            else if (strcmp(comms.message, "licat") == 0)
+            {
+                printf("\n\n\t[~] '%s' Action taken by '%s'\n", comms.message, comms.username);
+                while (item_ptr != NULL)
+                {
+                    if (item_ptr->id != 0 && strcmp(item_ptr->category, comms.argument) == 0)
+                    {
+                        sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, comms.PID);
+                        int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
+                        if (fd == -1)
+                        {
+                            printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                            quit(NULL);
+                        }
+                        int size2 = write(fd, item_ptr, sizeof(Item));
+                        if (size2 == -1)
+                        {
+                            printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                            quit(NULL);
+                        }
+                        close(fd);
+                    }
+                    item_ptr = item_ptr->next;
+                }
+                Item end;
+                end.id = -1;
+                sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, comms.PID);
+                int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
+                if (fd == -1)
+                {
+                    printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                    quit(NULL);
+                }
+                int size2 = write(fd, &end, sizeof(Item));
+                if (size2 == -1)
+                {
+                    printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                    quit(NULL);
+                }
+                close(fd);
+            }
+            else if (strcmp(comms.message, "lisel") == 0)
+            {
+                printf("\n\n\t[~] '%s' Action taken by '%s'\n", comms.message, comms.username);
+                while (item_ptr != NULL)
+                {
+                    if (item_ptr->id != 0 && strcmp(item_ptr->sellingUser, comms.argument) == 0)
+                    {
+                        sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, comms.PID);
+                        int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
+                        if (fd == -1)
+                        {
+                            printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                            quit(NULL);
+                        }
+                        int size2 = write(fd, item_ptr, sizeof(Item));
+                        if (size2 == -1)
+                        {
+                            printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                            quit(NULL);
+                        }
+                        close(fd);
+                    }
+                    item_ptr = item_ptr->next;
+                }
+                Item end;
+                end.id = -1;
+                sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, comms.PID);
+                int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
+                if (fd == -1)
+                {
+                    printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                    quit(NULL);
+                }
+                int size2 = write(fd, &end, sizeof(Item));
+                if (size2 == -1)
+                {
+                    printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                    quit(NULL);
+                }
+                close(fd);
+            }
+            else if (strcmp(comms.message, "lival") == 0)
+            {
+                printf("\n\n\t[~] '%s' Action taken by '%s'\n", comms.message, comms.username);
+                while (item_ptr != NULL)
+                {
+                    if (item_ptr->id != 0 && item_ptr->buyNowPrice <= comms.balance)
+                    {
+                        sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, comms.PID);
+                        int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
+                        if (fd == -1)
+                        {
+                            printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                            quit(NULL);
+                        }
+                        int size2 = write(fd, item_ptr, sizeof(Item));
+                        if (size2 == -1)
+                        {
+                            printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                            quit(NULL);
+                        }
+                        close(fd);
+                    }
+                    item_ptr = item_ptr->next;
+                }
+                Item end;
+                end.id = -1;
+                sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, comms.PID);
+                int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
+                if (fd == -1)
+                {
+                    printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                    quit(NULL);
+                }
+                int size2 = write(fd, &end, sizeof(Item));
+                if (size2 == -1)
+                {
+                    printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                    quit(NULL);
+                }
+                close(fd);
+            }
+            else if (strcmp(comms.message, "litime") == 0)
+            {
+                printf("\n\n\t[~] '%s' Action taken by '%s'\n", comms.message, comms.username);
+                while (item_ptr != NULL)
+                {
+                    time_t actual_time = time(NULL);
+                    struct tm *actual_time_tm = localtime(&actual_time);
+                    int actual_time_seconds = actual_time_tm->tm_hour * 3600 + actual_time_tm->tm_min * 60 + actual_time_tm->tm_sec;
+
+                    if (item_ptr->id != 0 && (actual_time_seconds + item_ptr->duration) <= (comms.balance + actual_time_seconds))
+                    {
+                        sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, comms.PID);
+                        int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
+                        if (fd == -1)
+                        {
+                            printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                            quit(NULL);
+                        }
+                        int size2 = write(fd, item_ptr, sizeof(Item));
+                        if (size2 == -1)
+                        {
+                            printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                            quit(NULL);
+                        }
+                        close(fd);
+                    }
+                    item_ptr = item_ptr->next;
+                }
+                Item end;
+                end.id = -1;
+                sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, comms.PID);
+                int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
+                if (fd == -1)
+                {
+                    printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                    quit(NULL);
+                }
+                int size2 = write(fd, &end, sizeof(Item));
+                if (size2 == -1)
+                {
+                    printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                    quit(NULL);
+                }
+                close(fd);
             }
         }
     }
@@ -731,8 +1070,8 @@ void *verifyCredentials(void *structThreadCredentials)
     int fd = open(BACKEND_FIFO, O_RDONLY);
     if (fd == -1)
     {
-        printf("\n[!] Error while opening pipe BACKEND_FIFO\n");
-        exit(EXIT_FAILURE);
+        printf("\n\t[!] Error while opening pipe BACKEND_FIFO\n");
+        quit(NULL);
     }
 
     while (1)
@@ -750,8 +1089,8 @@ void *verifyCredentials(void *structThreadCredentials)
                 int fd2 = open(FRONTEND_FINAL_FIFO, O_WRONLY);
                 if (fd2 == -1)
                 {
-                    printf("\n[!] Error while opening pipe\n");
-                    exit(EXIT_FAILURE);
+                    printf("\n\t[!] Error while opening pipe\n");
+                    quit(NULL);
                 }
 
                 int result = 0;
@@ -773,6 +1112,9 @@ void *verifyCredentials(void *structThreadCredentials)
                             printf("\n\n[~] User %s logged in\n", user_ptr->username);
                             user_ptr->loggedIn = 1;
                             user_ptr->PID = user.PID;
+                            // Store PID in the global variable
+                            frontendPIDArray[frontendPIDArrayIndex] = user.PID;
+                            frontendPIDArrayIndex++;
                             break;
                         }
                         else
@@ -791,8 +1133,8 @@ void *verifyCredentials(void *structThreadCredentials)
                 int size2 = write(fd2, &result, sizeof(result));
                 if (size2 == -1)
                 {
-                    printf("\n[!] Error while writing to pipe\n");
-                    exit(EXIT_FAILURE);
+                    printf("\n\t[!] Error while writing to pipe\n");
+                    quit(NULL);
                 }
                 close(fd2);
             }
@@ -803,15 +1145,15 @@ void *verifyCredentials(void *structThreadCredentials)
                 int fd2 = open(FRONTEND_FINAL_FIFO, O_WRONLY);
                 if (fd2 == -1)
                 {
-                    printf("\n[!] Error while opening pipe\n");
-                    exit(EXIT_FAILURE);
+                    printf("\n\t[!] Error while opening pipe\n");
+                    quit(NULL);
                 }
                 int result = -2;
                 int size2 = write(fd2, &result, sizeof(result));
                 if (size2 == -1)
                 {
-                    printf("\n[!] Error while writing to pipe\n");
-                    exit(EXIT_FAILURE);
+                    printf("\n\t[!] Error while writing to pipe\n");
+                    quit(NULL);
                 }
                 close(fd2);
             }
@@ -829,7 +1171,7 @@ void *verifyUserAlive(void *structThreadCredentials)
     printf("\n[~] Function VerifyUserAlive\n");
     int heartbeat = atoi(getenv("HEARTBEAT"));
     printf("\n[~] Heartbeat: %d\n", heartbeat);
-    
+
     // Send signal SIGURS2 to frontend and wait for signal SIGURS1
     // If signal SIGURS1 is not received in 5 seconds, the user is considered dead
     // If the user is dead, the user is removed from the list of connected users
@@ -853,7 +1195,7 @@ void *verifyUserAlive(void *structThreadCredentials)
                     exit(EXIT_FAILURE);
                 }
                 int size = read(fd, &comms, sizeof(comms));
-                if(size > 0)
+                if (size > 0)
                 {
                     printf("\n[~] User %s is alive\n", comms.username);
                 }
@@ -868,7 +1210,7 @@ void *verifyUserAlive(void *structThreadCredentials)
             user_ptr = user_ptr->next;
         }
     }
-    
+
     pthread_exit((void *)NULL);
 }
 void sendSignal(int s, siginfo_t *info, void *v)
@@ -878,7 +1220,10 @@ void sendSignal(int s, siginfo_t *info, void *v)
 }
 void crtlCSignal()
 {
-    // TODO: How to send signal to every frontend?
+    for (int i = 0; i < frontendPIDArrayIndex; i++)
+    {
+        kill(frontendPIDArray[i], SIGUSR1);
+    }
     quit(NULL);
 }
 
@@ -1004,7 +1349,7 @@ int main(int argc, char **argv)
 
     pthread_join(threadCredentials, NULL);
     pthread_join(threadFrontendComms, NULL);
-    //pthread_join(verifyAlive, NULL);
+    // pthread_join(verifyAlive, NULL);
     pthread_mutex_destroy(&mutex);
 
     pthread_exit((void *)NULL);

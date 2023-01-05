@@ -1,4 +1,4 @@
-filipeSa asEpilif 100
-joaoDuraes searudOaoj 100
-gecraf 1234 100
-asuryu tomasSilva 100
+filipeSa asEpilif 17
+joaoDuraes searudOaoj 17
+gecraf 1234 17
+asuryu tomasSilva 17
