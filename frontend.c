@@ -1,6 +1,7 @@
 #include "utils.h"
 
 int signalreceived; // flag
+
 int sell(char itemName[], char category[], int basePrice, int buyNowPrice, int duration, char sellerUsername[])
 {
     Item item;
@@ -156,6 +157,44 @@ void clear()
 {
     system("clear");
 }
+
+
+void imAlive()
+{
+
+    printf("hello?");
+    
+    Comms comms;
+    comms.PID = getpid();
+    comms.message = "imalive";
+   
+    int fd = open(BACKEND_FIFO_FRONTEND, O_WRONLY);
+  if(fd == -1)
+  {
+    printf("\nError communicating it's alive");
+    quit();
+  }
+  int size = write(fd, &comms, sizeof(comms));
+  if(size == -1)
+  {
+    printf("\nError communicating it's alive");
+  }
+}
+
+void *threadAlive(void *user_ptr)
+{
+    int heartbeat = atoi(getenv("HEARTBEAT"));
+    struct sigaction sa;
+    sa.sa_handler = imAlive;
+    sa.sa_flags = SA_SIGINFO;
+    sigaction(SIGALRM, &sa, NULL);
+    while(1)
+    {
+        sleep(heartbeat);
+        kill(getpid(), SIGALRM);
+    }
+}
+
 void *frontendCommandReader(void *user_ptr)
 {
     User *usr = (User *)user_ptr;
@@ -474,6 +513,7 @@ int main(int argc, char **argv)
     signal(SIGINT, quit);
     signal(SIGUSR1, receiveSignal);
     pthread_t threadBackendComms;
+    pthread_t threadImAlive;
 
     if (backendOn())
     {
@@ -560,8 +600,12 @@ int main(int argc, char **argv)
     {
         perror("Error creating thread");
     }
+     if (pthread_create(&threadImAlive, NULL, threadAlive, &user) != 0)
+    {
+        perror("Error creating thread to communicate its alive");
+    }
 
     pthread_join(threadBackendComms, NULL);
-
+    pthread_join(threadImAlive, NULL);
     return 0;
 }

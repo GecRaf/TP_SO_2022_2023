@@ -4,6 +4,7 @@
 int pipeBP[2], pipePB[2];
 int threadCounter = 0;
 
+
 void listUsers(void *user)
 {
     FILE *f;
@@ -416,6 +417,7 @@ void *frontendComms(void *structThreadCredentials)
                     user_ptr = user_ptr->next;
                 }
             }
+
             else if(strcmp(comms.message, "cash") == 0){
                 printf("\n\n\t[~] '%s' Action taken by '%s'", comms.message, comms.username);
                 while(user_ptr != NULL)
@@ -678,6 +680,47 @@ void *verifyCredentials(void *structThreadCredentials)
     close(fd);
     pthread_exit((void *)NULL);
 }
+
+
+void *verifyUserAlive(void *structThreadCredentials)
+{
+    StructThreadCredentials *structThreadCredentials_ptr = (StructThreadCredentials *)structThreadCredentials;
+    User user;
+    printf("\n[~] Function VerifyUserAlive\n");
+    int fd = open(BACKEND_FIFO, O_RDONLY);
+    if(fd==-1)
+    {
+        printf("\nError opening reading FIFO");
+        return NULL;
+    }
+    while(1){
+        User *user_ptr = structThreadCredentials_ptr->user;
+        int i=0;
+        Comms comms;
+        int size= read(fd, &comms, sizeof(comms));
+        if(size > 0)
+        {
+            if(comms.PID == 0)
+            {
+                break;
+            }
+            while(user_ptr != 0)
+            {
+                if(user_ptr[i].PID == comms.PID)
+                {
+                    printf("User %s is alive", user_ptr[i].username);
+                }
+                i++;
+            }
+        }
+    }
+}
+
+void *removeUserNotAlive(void *structThreadCredentials)
+{
+
+}
+
 void sendSignal(int s, siginfo_t *info, void *v)
 {
     int n = info->si_value.sival_int;
@@ -782,6 +825,8 @@ int main(int argc, char **argv)
     pthread_t threadPromotor[threadCounter];
     pthread_t threadCredentials;
     pthread_t threadFrontendComms;
+    pthread_t verifyAlive;
+    pthread_t removeNotAlive;
     pthread_mutex_t mutex;
     pthread_mutex_init(&mutex, NULL);
     backend.mutex = &mutex;
@@ -811,6 +856,14 @@ int main(int argc, char **argv)
 
     if (pthread_create(&threadFrontendComms, NULL, frontendComms, &structThreadCredentials) != 0)
         perror("Error creating thread");
+    if(pthread_create(&verifyAlive, NULL, verifyUserAlive, &structThreadCredentials)!=0)
+    {
+        perror("Error creating thread");
+    } 
+     if(pthread_create(&removeNotAlive, NULL, removeUserNotAlive, &structThreadCredentials)!=0)
+    {
+        perror("Error creating thread");
+    } 
 
 
     struct sigaction sa; //TODO: Check this later
@@ -830,6 +883,8 @@ int main(int argc, char **argv)
 
     pthread_join(threadCredentials, NULL);
     pthread_join(threadFrontendComms, NULL);
+    pthread_join(verifyAlive, NULL);
+    pthread_join(removeNotAlive, NULL);
     pthread_mutex_destroy(&mutex);
 
     pthread_exit((void *)NULL);
