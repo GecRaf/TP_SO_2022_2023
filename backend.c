@@ -1,6 +1,13 @@
 #include "utils.h"
 #include "users_lib.h"
 
+// Notes:
+// 1. List command keeps failing sometimes, randomly
+// 2. reprom sometimes works, sometimes it doesn't
+// 3. Cancel command it's working, except for the fact that it's cancelling the backend process too xD
+// 4. HEARTBEAT function to be restructured
+// 5. Properly name the error messages in order to be easier to debug
+
 int pipeBP[2], pipePB[2];
 int threadCounter = 0;
 

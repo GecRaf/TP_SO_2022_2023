@@ -1,5 +1,9 @@
 #include "utils.h"
 
+// Notes:
+// 1. Change all exit(EXIT_FAILURE) to quit()
+// 2. Properly name the error messages in order to be easier to debug
+
 int sell(char itemName[], char category[], int basePrice, int buyNowPrice, int duration, char sellerUsername[])
 {
     Item item;
@@ -71,7 +75,6 @@ void list()
         printf("\n\t[~] Item %d\n", item.id);
         printf("\t[~] Name: %s\n", item.name);
         printf("\t[~] Category: %s\n", item.category);
-        printf("\t[~] BOUGHT: %d\n", item.bought);
         printf("\t[~] Base Price: %d\n", item.basePrice);
         printf("\t[~] Buy Now Price: %d\n", item.buyNowPrice);
         printf("\t[~] Highest bid: %d\n", item.highestBid);
