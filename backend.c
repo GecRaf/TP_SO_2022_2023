@@ -4,9 +4,8 @@
 // Notes:
 // 1. 'List' command keeps failing sometimes, randomly
 // 2. 'reprom' command sometimes works, sometimes it doesn't
-// 3. 'Cancel' command it's working, except for the fact that it's cancelling the backend process too xD SIGUSR1 related (Configure SIGUSR1 na thread dos promotores para sair do cilo de leitura)
-// 4. HEARTBEAT function to be restructured
-// 5. Properly name the error messages in order to be easier to debug
+// 3. HEARTBEAT function to be restructured
+// 4. Properly name the error messages in order to be easier to debug
 
 int pipeBP[2], pipePB[2];
 int threadCounter = 0;
@@ -15,19 +14,10 @@ int threadCounter = 0;
 int frontendPIDArrayIndex = 0;
 int frontendPIDArray[10];
 
-void quitPromotor()
-{
-    close(pipePB[0]);
+// Exclusivly to kill promotor processes in case of quit()
+int promotorPIDArrayIndex = 0;
+int promotorPIDArray[10];
 
-
-    // signqal()
-    //wait()
-    // for cycle
-
-    // pthread_exit((void*) NULL);
-    // pthread_join(thread, NULL);
-    // kill(pid, SIGUSR2); // Not understood
-}
 void quit(void *user)
 {
     printf("\n\t[!] Closing...\n\n");
@@ -43,11 +33,19 @@ void quit(void *user)
             usr = usr->next;
         }
     }
-    quitPromotor();
+    
     sleep(1);
     unlink(BACKEND_FIFO);
     unlink(BACKEND_FIFO_FRONTEND);
     unlink(COMMS_FIFO);
+    
+    close(pipePB[0]);
+    for(int i = 0; i < promotorPIDArrayIndex; i++)
+    {
+        kill(promotorPIDArray[i], SIGUSR1);
+        waitpid(promotorPIDArray[i], NULL, 0);
+    }
+
     exit(EXIT_SUCCESS);
 }
 void listUsers(void *user)
@@ -140,9 +138,13 @@ void kick(char username[], void *user)
     }
     printf("\n\t[!] User '%s' does not exist\n\n", username);
 }
-void *promotorComms(void *vargp)
+void *promotorComms(void *prom)
 {
-    if (strcmp(vargp, "") == 0)
+    Promotor *promotor = (Promotor *)prom;
+    // Estrutura esta a chegar vazia
+    printf("\n\t[~] Promotor '%s' started\n", promotor->path);
+
+    if (strcmp(promotor->path, "") == 0)
     {
         pthread_exit((void *)NULL);
     }
@@ -151,7 +153,7 @@ void *promotorComms(void *vargp)
     char *maxPromotorsChar = getenv("MAX_PROMOTORS");
     int maxPromotors = atoi(maxPromotorsChar);
 
-    char *promotorsExecutablesPath = vargp;
+    char *promotorsExecutablesPath = promotor->path;
 
     int estado, num;
     pipe(pipeBP);
@@ -172,9 +174,11 @@ void *promotorComms(void *vargp)
     }
     else
     {
+        promotor->PID = pid;
+        promotorPIDArray[promotorPIDArrayIndex] = pid;
+        promotorPIDArrayIndex++;
+        printf("\n\t[~] Promotor '%s' PID '%5d'\n", promotorsExecutablesPath, pid);
         int flag = 1;
-        int maxPromotors = atoi(getenv("MAX_PROMOTORS"));
-        Promotor *pr = (Promotor *)malloc(sizeof(Promotor) * maxPromotors);
         while (flag) // Review
         {
             close(pipeBP[0]); // Close pipeBP[0]
@@ -191,15 +195,15 @@ void *promotorComms(void *vargp)
                 {
                     if (i == 0)
                     {
-                        strcpy(pr->category, token);
+                        strcpy(promotor->category, token);
                     }
                     else if (i == 1)
                     {
-                        pr->discount = atoi(token);
+                        promotor->discount = atoi(token);
                     }
                     else if (i == 2)
                     {
-                        pr->duration = atoi(token);
+                        promotor->duration = atoi(token);
                     }
                     token = strtok(NULL, " ");
                     ++i;
@@ -263,22 +267,18 @@ void launchPromotersThreads(void *structThreadCredentials, pthread_t *threadProm
 {
     StructThreadCredentials *mainStruct = (StructThreadCredentials *)structThreadCredentials;
     Promotor *prt = (Promotor *)mainStruct->promotor;
+    
 
     while (threadCounter != 0)
     {
         if (strcmp(prt->path, "") != 0 && (prt->active == 0 || prt->active == 2))
         {
-            if (pthread_create(&threadPromotor[threadCounter], NULL, promotorComms, &prt->path) != 0)
+            // Create thread for each promotor and send the exact promotor struct pointer
+            if (pthread_create(&threadPromotor[threadCounter], NULL, (void *)promotorComms, (void *)prt) != 0)
                 perror("Error creating thread");
             printf("\n\t[+] Promotor thread created '%s'\n", prt->path);
             prt->active = 1;
             prt->threadID = threadCounter;
-        }
-        else if (strcmp(prt->path, "") != 0 && prt->active == 3)
-        {
-            if (pthread_kill(threadPromotor[prt->threadID], SIGUSR1) != 0)
-                perror("Error killing thread");
-            printf("\n\t[+] Promotor thread killed '%s'\n", prt->path);
         }
         prt = prt->next;
         threadCounter--;
@@ -338,22 +338,30 @@ void reprom(void *structThreadCredentials, pthread_t *threadPromotor)
     // Print file line by line
     char line[100];
     int newPromotors = 0;
+
     printf("\n\t[~] List of new promoters:\n");
-    while (fscanf(f, "%s", line) == 1)
+
+    while (fgets(line, 100, f) == line)
     {
         prt = (Promotor *)mainStruct->promotor;
-        char prefix[100] = "txt/";
-        strcat(prefix, line);
-        strcpy(line, prefix);
-        line[strcspn(line, "\n")] = 0;
+        //printf("\n\t\t[~] %s\n", line);
+        // Check if line as \n and remove it
+        if (line[strlen(line) - 1] == '\n')
+            line[strlen(line) - 1] = '\0';
+
+        // Concatenate txt/ to the path
+        char path[100] = "txt/";
+        strcat(path, line);
+        strcpy(line, path);
 
         int flag = 0;
         for (int i = 0; i < maxPromotors; i++)
         {
             if (strcmp(prt->path, line) == 0)
             {
+                printf("\n\t\t[+] Promotor already exists '%s' and is active\n", prt->path);
                 flag = 1;
-                prt->active = 1;
+                prt->active = 3;
                 break;
             }
             prt = prt->next;
@@ -367,7 +375,7 @@ void reprom(void *structThreadCredentials, pthread_t *threadPromotor)
                 {
                     strcpy(prt->path, line);
                     prt->active = 2;
-                    printf("\n\t[+] Promotor added '%s'\n", prt->path);
+                    printf("\n\t\t[+] Promotor added '%s'\n", prt->path);
                     threadCounter++;
                     newPromotors++;
                     break;
@@ -376,16 +384,38 @@ void reprom(void *structThreadCredentials, pthread_t *threadPromotor)
             }
         }
     }
+    prt = (Promotor *)mainStruct->promotor;
+    for(int i = 0; i < maxPromotors; i++)
+    {
+        if (strcmp(prt->path, "") != 0 && prt->active != 3 && prt->active != 2)
+        {
+            printf("\n\t\t[+] Promotor '%s' existed and now it's gone\n", prt->path);
+            kill(prt->PID, SIGUSR1);
+            waitpid(prt->PID, NULL, 0);
+            printf("\n\t\t[+] Promotor thread killed '%s'\n\n", prt->path);
+            prt->active = 0;
+        }
+        prt = prt->next;
+    }
+    prt = (Promotor *)mainStruct->promotor;
+    for(int i = 0; i < maxPromotors; i++)
+    {
+        if (strcmp(prt->path, "") != 0 && prt->active == 3)
+        {
+            prt->active = 1;
+        }
+        prt = prt->next;
+    }
+    prt = (Promotor *)mainStruct->promotor;
+    launchPromotersThreads(structThreadCredentials, threadPromotor);
     if (newPromotors == 0)
-        printf("\n\t[!] No new promoters found\n");
+        printf("\n\t\t[!] No new promoters found\n");
     fclose(f);
     printf("\n");
-    prt = (Promotor *)mainStruct->promotor; // Is this really necessary?
-    launchPromotersThreads(structThreadCredentials, threadPromotor);
+
 }
 void cancelPromotor(void *structThreadCredentials, pthread_t *threadPromotor, char path[])
 {
-    // Search in the struct promotor for the path and get the threadID and kill it
     StructThreadCredentials *mainStruct = (StructThreadCredentials *)structThreadCredentials;
     Promotor *prt = (Promotor *)mainStruct->promotor;
 
@@ -396,9 +426,9 @@ void cancelPromotor(void *structThreadCredentials, pthread_t *threadPromotor, ch
         if (strcmp(prt->path, path) == 0)
         {
             // TODO: Kill thread without crashing the program
-            if (pthread_kill(threadPromotor[prt->threadID], SIGUSR1) != 0)
-                perror("Error killing thread");
-            printf("\n\t[+] Promotor thread killed '%s'\n", prt->path);
+            kill(prt->PID, SIGUSR1);
+            waitpid(prt->PID, NULL, 0);
+            printf("\n\t[+] Promotor thread killed '%s'\n\n", prt->path);
             prt->active = 0;
             notFound = 1;
             break;
@@ -1267,7 +1297,7 @@ void *itemActions(void *structThreadCredentials)
                     item_ptr->duration = -1;
                     // Print this only once
                     if(item_ptr->duration == -1){
-                        printf("\n[~] Item '%s' with ID '%d' timed out\n", item_ptr->name, item_ptr->id);
+                        printf("\n\n\t[~] Item '%s' with ID '%d' timed out\n\n", item_ptr->name, item_ptr->id);
                         while(user_ptr != NULL){
                             if(user_ptr->loggedIn == 1){
                                 char FRONTEND_FINAL_FIFO[100];
