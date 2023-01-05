@@ -2,9 +2,9 @@
 #include "users_lib.h"
 
 // Notes:
-// 1. List command keeps failing sometimes, randomly
-// 2. reprom sometimes works, sometimes it doesn't
-// 3. Cancel command it's working, except for the fact that it's cancelling the backend process too xD
+// 1. 'List' command keeps failing sometimes, randomly
+// 2. 'reprom' command sometimes works, sometimes it doesn't
+// 3. 'Cancel' command it's working, except for the fact that it's cancelling the backend process too xD SIGUSR1 related (Configure SIGUSR1 na thread dos promotores para sair do cilo de leitura)
 // 4. HEARTBEAT function to be restructured
 // 5. Properly name the error messages in order to be easier to debug
 
@@ -18,28 +18,36 @@ int frontendPIDArray[10];
 void quitPromotor()
 {
     close(pipePB[0]);
+
+
+    // signqal()
+    //wait()
+    // for cycle
+
     // pthread_exit((void*) NULL);
     // pthread_join(thread, NULL);
-    //  kill(pid, SIGUSR2); // Not understood
+    // kill(pid, SIGUSR2); // Not understood
 }
 void quit(void *user)
 {
-    User *usr = (User *)user;
     printf("\n\t[!] Closing...\n\n");
-
-    while (usr != NULL)
+    if (user != NULL)
     {
-        if (usr->loggedIn == 1)
+        User *usr = (User *)user;
+        while (usr != NULL)
         {
-            kill(usr->PID, SIGUSR1);
+            if (usr->loggedIn == 1)
+            {
+                kill(usr->PID, SIGUSR1);
+            }
+            usr = usr->next;
         }
-        usr = usr->next;
     }
-
-    unlink(BACKEND_FIFO);
-    unlink(BACKEND_FIFO_FRONTEND);
     quitPromotor();
     sleep(1);
+    unlink(BACKEND_FIFO);
+    unlink(BACKEND_FIFO_FRONTEND);
+    unlink(COMMS_FIFO);
     exit(EXIT_SUCCESS);
 }
 void listUsers(void *user)
@@ -107,7 +115,8 @@ void list(void *item)
     }
     printf("\n");
 }
-void kick(char username[], void *user){
+void kick(char username[], void *user)
+{
     User *usr = (User *)user;
     while (usr != NULL)
     {
@@ -151,17 +160,13 @@ void *promotorComms(void *vargp)
 
     if (pid == 0)
     {
-        close(0);         // Close stdin
-        dup(pipeBP[0]);   // Duplicate pipeBP[0] to read from pipe BackEnd -> Promotor
-        close(pipeBP[0]); // Close pipeBP[0]
-        close(pipeBP[1]); // Close pipeBP[1]
         close(1);         // Close stdout
         dup(pipePB[1]);   // Duplicate pipePB[1] to write to pipe Promotor -> BackEnd
         close(pipePB[0]); // Close pipePB[0]
         close(pipePB[1]); // Close pipePB[1]
         if (execl(promotorsExecutablesPath, promotorsExecutablesPath, NULL) == -1)
         {
-            printf("\n[!] Error while executing ' promotor_oficial '\n");
+            printf("\n\t[!] Error while executing ' %s '\n", promotorsExecutablesPath);
             quit(NULL);
         }
     }
@@ -271,7 +276,7 @@ void launchPromotersThreads(void *structThreadCredentials, pthread_t *threadProm
         }
         else if (strcmp(prt->path, "") != 0 && prt->active == 3)
         {
-            if (pthread_kill(threadPromotor[prt->threadID], SIGUSR2) != 0)
+            if (pthread_kill(threadPromotor[prt->threadID], SIGUSR1) != 0)
                 perror("Error killing thread");
             printf("\n\t[+] Promotor thread killed '%s'\n", prt->path);
         }
@@ -391,7 +396,7 @@ void cancelPromotor(void *structThreadCredentials, pthread_t *threadPromotor, ch
         if (strcmp(prt->path, path) == 0)
         {
             // TODO: Kill thread without crashing the program
-            if (pthread_kill(threadPromotor[prt->threadID], SIGUSR2) != 0)
+            if (pthread_kill(threadPromotor[prt->threadID], SIGUSR1) != 0)
                 perror("Error killing thread");
             printf("\n\t[+] Promotor thread killed '%s'\n", prt->path);
             prt->active = 0;
@@ -400,10 +405,11 @@ void cancelPromotor(void *structThreadCredentials, pthread_t *threadPromotor, ch
         }
         prt = prt->next;
     }
-    if (notFound == 0){
+    if (notFound == 0)
+    {
         printf("\n\t[!] Path not found\n");
         printf("\n\t[!] Use command <prom> to see the active promoters\n\n");
-    }  
+    }
 }
 void clear()
 {
@@ -501,7 +507,7 @@ void backendCommandReader(void *structThreadCredentials, pthread_t *threadPromot
                 printf("\t[!] No arguments needed\n");
                 continue;
             }
-            quit(usr); // Needs to assure closing of possible open pipes and threads
+            quit(usr);
         }
         else if (strcmp(cmd, "clear") == 0)
         {
@@ -703,9 +709,12 @@ void *frontendComms(void *structThreadCredentials)
                                     }
                                     else
                                     {
-                                        if(item_ptr->highestBid > item_ptr->basePrice){
+                                        if (item_ptr->highestBid > item_ptr->basePrice)
+                                        {
                                             comms.balance = item_ptr->highestBid;
-                                        }else{
+                                        }
+                                        else
+                                        {
                                             comms.balance = item_ptr->basePrice;
                                         }
                                         printf("\n\n\t[!] User '%s' bid '%d' euros for item with ID '%d' but it was rejected", comms.username, comms.balance, comms.buyID);
@@ -808,12 +817,13 @@ void *frontendComms(void *structThreadCredentials)
                     quit(NULL);
                 }
                 close(fd);
-                pthread_mutex_lock(backend_ptr->mutex);
+                
                 int id = 0;
                 while (item_ptr != NULL)
                 {
                     if (item_ptr->id == 0)
                     {
+                        pthread_mutex_lock(backend_ptr->mutex);
                         item_ptr->id = id + 1;
                         it.id = item_ptr->id;
                         strcpy(item_ptr->name, it.name);
@@ -824,7 +834,8 @@ void *frontendComms(void *structThreadCredentials)
                         strcpy(item_ptr->sellingUser, it.sellingUser);
                         strcpy(item_ptr->highestBidder, it.highestBidder);
                         item_ptr->bought = it.bought;
-
+                        pthread_mutex_unlock(backend_ptr->mutex);
+                        printf("\n Item duration received: %d\n", item_ptr->duration);
                         // Send int with the id of the item to the frontend
                         sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, comms.PID);
                         int fd2 = open(FRONTEND_FINAL_FIFO, O_WRONLY);
@@ -841,7 +852,7 @@ void *frontendComms(void *structThreadCredentials)
                             quit(NULL);
                         }
                         close(fd2);
-                        pthread_mutex_unlock(backend_ptr->mutex);
+                        
 
                         break;
                     }
@@ -857,7 +868,7 @@ void *frontendComms(void *structThreadCredentials)
                 printf("\n\n\t[~] '%s' Action taken by '%s'\n", comms.message, comms.username);
                 while (item_ptr != NULL)
                 {
-                    if (item_ptr->id != 0 && item_ptr->bought != 1)
+                    if (item_ptr->id != 0 && item_ptr->bought != 1 && item_ptr->duration > 0)
                     {
                         sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, comms.PID);
                         int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
@@ -898,7 +909,7 @@ void *frontendComms(void *structThreadCredentials)
                 printf("\n\n\t[~] '%s' Action taken by '%s'\n", comms.message, comms.username);
                 while (item_ptr != NULL)
                 {
-                    if (item_ptr->id != 0 && strcmp(item_ptr->category, comms.argument) == 0)
+                    if (item_ptr->id != 0 && strcmp(item_ptr->category, comms.argument) == 0 && item_ptr->duration > 0)
                     {
                         sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, comms.PID);
                         int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
@@ -939,7 +950,7 @@ void *frontendComms(void *structThreadCredentials)
                 printf("\n\n\t[~] '%s' Action taken by '%s'\n", comms.message, comms.username);
                 while (item_ptr != NULL)
                 {
-                    if (item_ptr->id != 0 && strcmp(item_ptr->sellingUser, comms.argument) == 0)
+                    if (item_ptr->id != 0 && strcmp(item_ptr->sellingUser, comms.argument) == 0 && item_ptr->duration > 0)
                     {
                         sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, comms.PID);
                         int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
@@ -980,7 +991,7 @@ void *frontendComms(void *structThreadCredentials)
                 printf("\n\n\t[~] '%s' Action taken by '%s'\n", comms.message, comms.username);
                 while (item_ptr != NULL)
                 {
-                    if (item_ptr->id != 0 && item_ptr->buyNowPrice <= comms.balance)
+                    if (item_ptr->id != 0 && item_ptr->buyNowPrice <= comms.balance && item_ptr->duration > 0)
                     {
                         sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, comms.PID);
                         int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
@@ -1025,7 +1036,7 @@ void *frontendComms(void *structThreadCredentials)
                     struct tm *actual_time_tm = localtime(&actual_time);
                     int actual_time_seconds = actual_time_tm->tm_hour * 3600 + actual_time_tm->tm_min * 60 + actual_time_tm->tm_sec;
 
-                    if (item_ptr->id != 0 && (actual_time_seconds + item_ptr->duration) <= (comms.balance + actual_time_seconds))
+                    if (item_ptr->id != 0 && (actual_time_seconds + item_ptr->duration) <= (comms.balance + actual_time_seconds) && item_ptr->duration > 0)
                     {
                         sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, comms.PID);
                         int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
@@ -1220,11 +1231,6 @@ void *verifyUserAlive(void *structThreadCredentials)
 
     pthread_exit((void *)NULL);
 }
-void sendSignal(int s, siginfo_t *info, void *v)
-{
-    int n = info->si_value.sival_int;
-    kill(info->si_pid, SIGUSR1);
-}
 void crtlCSignal()
 {
     for (int i = 0; i < frontendPIDArrayIndex; i++)
@@ -1232,6 +1238,68 @@ void crtlCSignal()
         kill(frontendPIDArray[i], SIGUSR1);
     }
     quit(NULL);
+}
+void *itemActions(void *structThreadCredentials)
+{
+    StructThreadCredentials *structThreadCredentials_ptr = (StructThreadCredentials *)structThreadCredentials;
+    User *user_ptr = (User *)structThreadCredentials_ptr->user;
+    Item *item_ptr = (Item *)structThreadCredentials_ptr->item;
+    Backend *backend_ptr = (Backend *)structThreadCredentials_ptr->backend;
+    // Function to simply decrease the duration of the items evert second
+    // If the duration of an item is 0, the item is removed from the list
+    while (1)
+    {
+        item_ptr = (Item *)structThreadCredentials_ptr->item;
+        sleep(1);
+        pthread_mutex_lock(backend_ptr->mutex);
+        while (item_ptr != NULL)
+        {
+            // Check if the struct name is not empty
+            if (strcmp(item_ptr->name, "") != 0)
+            {
+                // Check if the duration is greater than 0
+                if (item_ptr->duration > 0)
+                {
+                    item_ptr->duration--;
+                }
+                else if(item_ptr->duration == 0)
+                {
+                    item_ptr->duration = -1;
+                    // Print this only once
+                    if(item_ptr->duration == -1){
+                        printf("\n[~] Item '%s' with ID '%d' timed out\n", item_ptr->name, item_ptr->id);
+                        while(user_ptr != NULL){
+                            if(user_ptr->loggedIn == 1){
+                                char FRONTEND_FINAL_FIFO[100];
+                                sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, user_ptr->PID);
+                                int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
+                                if (fd == -1)
+                                {
+                                    printf("\n\t[!] Error while opening pipe\n");
+                                    quit(NULL);
+                                }
+                                Comms comms;
+                                strcpy(comms.username, item_ptr->name);
+                                comms.buyID = item_ptr->id;
+                                strcpy(comms.message, "ItemTimedOut");
+                                int size = write(fd, &comms, sizeof(comms));
+                                if (size == -1)
+                                {
+                                    printf("\n\t[!] Error while writing to pipe\n");
+                                    quit(NULL);
+                                }
+                                close(fd);
+                            }
+                            user_ptr = user_ptr->next;
+                        }
+                    }
+                }
+            }
+            item_ptr = item_ptr->next;
+        }
+        pthread_mutex_unlock(backend_ptr->mutex);
+    }
+    pthread_exit((void *)NULL);
 }
 
 int main(int argc, char **argv)
@@ -1290,6 +1358,12 @@ int main(int argc, char **argv)
         return 0;
     }
 
+    if (mkfifo(COMMS_FIFO, 0666) == -1)
+    {
+        printf("\n[!] Error while creating the backendFrontend FIFO\n");
+        return 0;
+    }
+
     StructThreadCredentials structThreadCredentials;
     Backend backend;
     User usr;
@@ -1312,6 +1386,7 @@ int main(int argc, char **argv)
     pthread_t threadPromotor[threadCounter];
     pthread_t threadCredentials;
     pthread_t threadFrontendComms;
+    pthread_t threadItemActions;
     pthread_t verifyAlive;
     pthread_mutex_t mutex;
     pthread_mutex_init(&mutex, NULL);
@@ -1325,10 +1400,13 @@ int main(int argc, char **argv)
     launchPromotersThreads(&structThreadCredentials, threadPromotor);
 
     if (pthread_create(&threadCredentials, NULL, verifyCredentials, &structThreadCredentials) != 0)
-        perror("Error creating thread");
+        perror("Error creating thread 'threadCredentials'");
 
     if (pthread_create(&threadFrontendComms, NULL, frontendComms, &structThreadCredentials) != 0)
-        perror("Error creating thread");
+        perror("Error creating thread 'threadFrontendComms'");
+
+    if (pthread_create(&threadItemActions, NULL, itemActions, &structThreadCredentials) != 0)
+        perror("Error creating thread 'threadItemActions'");
 
     /*if(pthread_create(&verifyAlive, NULL, verifyUserAlive, &structThreadCredentials)!=0)
     {
@@ -1356,11 +1434,15 @@ int main(int argc, char **argv)
 
     pthread_join(threadCredentials, NULL);
     pthread_join(threadFrontendComms, NULL);
+    pthread_join(threadItemActions, NULL);
     // pthread_join(verifyAlive, NULL);
     pthread_mutex_destroy(&mutex);
 
-    pthread_exit((void *)NULL);
+    // FIFO unlink
+
     unlink(BACKEND_FIFO);
     unlink(BACKEND_FIFO_FRONTEND);
+    unlink(COMMS_FIFO);
+
     return 0;
 }

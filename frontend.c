@@ -3,6 +3,7 @@
 // Notes:
 // 1. Change all exit(EXIT_FAILURE) to quit()
 // 2. Properly name the error messages in order to be easier to debug
+// 3. Item "sold out" doesnt print in all frontends. Make open pipe non block?
 
 int sell(char itemName[], char category[], int basePrice, int buyNowPrice, int duration, char sellerUsername[])
 {
@@ -102,7 +103,8 @@ void list()
     }
     printf("\n");
 }
-void currentTime(){
+void currentTime()
+{
     time_t t = time(NULL);
     struct tm tm = *localtime(&t);
     printf("\n\t[~] Current time: %d-%d-%d %d:%d:%d\n\n", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
@@ -203,7 +205,7 @@ void *frontendCommandReader(void *user_ptr)
         *cmd = 0;
         printf("[%5d] COMMAND: ", pid);
         scanf(" %49[^\n]", command);
-        sscanf(command, "%14s %29[^\n]", cmd, arg);
+        sscanf(command, "%14s %39[^\n]", cmd, arg);
 
         if (strcmp(cmd, "sell") == 0)
         {
@@ -387,16 +389,20 @@ void *frontendCommandReader(void *user_ptr)
                 printf("\n\t[!] Error reading from frontend fifo\n\n");
                 exit(EXIT_FAILURE);
             }
-            if(comms.buyID == 1){
+            if (comms.buyID == 1)
+            {
                 printf("\n\t[!] You don't have enough money to buy the item with ID: '%d'\n\n", id);
             }
-            else if(comms.buyID == 2){
+            else if (comms.buyID == 2)
+            {
                 printf("\n\t[!] Successfully bought the item with ID: '%d'\n\n", id);
             }
-            else if(comms.buyID == 3){
+            else if (comms.buyID == 3)
+            {
                 printf("\n\t[!] Successfully bidded '%d' euros for the item with ID: '%d'\n\n", value, id);
             }
-            else if(comms.buyID == 4){
+            else if (comms.buyID == 4)
+            {
                 printf("\n\t[!] Bidding value is too low! Minimum bid: %d\n\n", comms.balance);
             }
             close(fd2);
@@ -521,6 +527,41 @@ void receiveSignal(int n)
     sleep(1);
     exit(EXIT_SUCCESS);
 }
+void *receiveMessages(void *user_ptr)
+{
+    User *user = (User *)user_ptr;
+    Comms comms;
+    // Assure that all frontends receive the message at the same time
+    sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, user->PID);
+    int comms_fd = open(FRONTEND_FINAL_FIFO, O_RDONLY);
+    if (comms_fd == -1)
+    {
+        printf("\n\t[!] Error opening comms fifo\n\n");
+        quit();
+    }
+
+    while (1)
+    {
+        int size = read(comms_fd, &comms, sizeof(comms));
+        if (size == -1)
+        {
+            printf("\n\t[!] Error reading from comms fifo\n\n");
+            quit();
+        }
+        if (size > 0)
+        {
+            if (strcmp(comms.message, "ItemTimedOut") == 0)
+            {
+                printf("\n\n\t[~] Item '%s' with ID '%d' timed out\n", comms.username, comms.buyID);
+            }
+            else if (strcmp(comms.message, "sold") == 0)
+            {
+                
+            }
+        }
+    }
+    pthread_exit((void *)NULL);
+}
 
 int main(int argc, char **argv)
 {
@@ -528,6 +569,7 @@ int main(int argc, char **argv)
     signal(SIGINT, quit);
     signal(SIGUSR1, receiveSignal);
     pthread_t threadBackendComms;
+    pthread_t threadReceiveMessages;
     pthread_t threadImAlive;
 
     if (backendOn())
@@ -616,13 +658,19 @@ int main(int argc, char **argv)
         perror("Error creating thread");
     }
 
+    if (pthread_create(&threadReceiveMessages, NULL, receiveMessages, &user) != 0)
+    {
+        perror("Error creating thread");
+    }
+
     /*if (pthread_create(&threadImAlive, NULL, threadAlive, &user) != 0)
     {
         perror("Error creating thread to communicate its alive");
     }*/
 
     pthread_join(threadBackendComms, NULL);
-    //pthread_join(threadImAlive, NULL);
+    pthread_join(threadReceiveMessages, NULL);
+    // pthread_join(threadImAlive, NULL);
 
     return 0;
 }

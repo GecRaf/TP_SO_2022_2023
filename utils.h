@@ -17,6 +17,7 @@
 #define BACKEND_FIFO "backend_fifo"
 #define BACKEND_FIFO_FRONTEND "backend_fifo_frontend"
 #define FRONTEND_FIFO "frontend_fifo[%d]"
+#define COMMS_FIFO "comms_fifo"
 char FRONTEND_FINAL_FIFO[50];
 
 typedef struct structThreadCredentials{
@@ -73,6 +74,7 @@ typedef struct promotor{
     int duration;
     int active;
     int threadID;
+    int PID;
     struct promotor *next;
 }Promotor;
 

@@ -1,3 +1,4 @@
 1 sapatilhas desporto 50 30 100
 2 computador tecnologia 100 95 200
 3 martelo construcao 10 20 200
+4 iphone tecnologia 1000 1000 10
