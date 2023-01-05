@@ -3,9 +3,8 @@
 
 // Notes:
 // 1. 'List' command keeps failing sometimes, randomly
-// 2. 'reprom' command sometimes works, sometimes it doesn't
-// 3. HEARTBEAT function to be restructured
-// 4. Properly name the error messages in order to be easier to debug
+// 2. HEARTBEAT function to be restructured
+// 3. Properly name the error messages in order to be easier to debug
 
 int pipeBP[2], pipePB[2];
 int threadCounter = 0;
