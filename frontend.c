@@ -1,5 +1,6 @@
 #include "utils.h"
 
+
 int signalreceived; // flag
 
 int sell(char itemName[], char category[], int basePrice, int buyNowPrice, int duration, char sellerUsername[])
@@ -161,37 +162,39 @@ void clear()
 
 void imAlive()
 {
-
-    printf("hello?");
-    
+    fflush(stdout);
     Comms comms;
     comms.PID = getpid();
-    comms.message = "imalive";
+    int env = 1234;
+    //comms.message = "imalive";
    
-    int fd = open(BACKEND_FIFO_FRONTEND, O_WRONLY);
+    int fd = open(ALIVE_FIFO, O_RDWR);
   if(fd == -1)
   {
     printf("\nError communicating it's alive");
     quit();
   }
-  int size = write(fd, &comms, sizeof(comms));
+  int size = write(fd, &env, sizeof(env));
   if(size == -1)
   {
     printf("\nError communicating it's alive");
   }
+  close(fd);
 }
 
 void *threadAlive(void *user_ptr)
 {
-    int heartbeat = atoi(getenv("HEARTBEAT"));
+   // int heartbeat = atoi(getenv("HEARTBEAT"));
+ /*  
     struct sigaction sa;
     sa.sa_handler = imAlive;
     sa.sa_flags = SA_SIGINFO;
     sigaction(SIGALRM, &sa, NULL);
-    while(1)
+   */ while(1)
     {
-        sleep(heartbeat);
-        kill(getpid(), SIGALRM);
+        sleep(3);
+       // kill(getpid(), SIGALRM);
+       imAlive();
     }
 }
 
@@ -534,6 +537,11 @@ int main(int argc, char **argv)
         printf("\n[!] Error creating frontend fifo!\n");
         return 0;
     }
+/*
+    if(mkfifo(ALIVE_FIFO, O_RDWR) == -1){
+        printf("\n[!] Error creating alive fifo!\n");
+        return 0;
+    }*/
 
     // Aqui envia para o backend as credenciais e retorna se são válidas ou não
     strcpy(user.username, argv[1]);

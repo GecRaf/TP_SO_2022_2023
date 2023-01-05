@@ -13,6 +13,8 @@
 
 #define BACKEND_FIFO "backend_fifo"
 #define BACKEND_FIFO_FRONTEND "backend_fifo_frontend"
+#define ALIVE_FIFO "alive_fifo"
+
 #define FRONTEND_FIFO "frontend_fifo[%d]"
 
 typedef struct{

@@ -124,6 +124,7 @@ void quit(void *user)
 
     unlink(BACKEND_FIFO);
     unlink(BACKEND_FIFO_FRONTEND);
+    unlink (ALIVE_FIFO);
     quitPromotor();
     sleep(1);
     exit(EXIT_SUCCESS);
@@ -687,31 +688,30 @@ void *verifyUserAlive(void *structThreadCredentials)
     StructThreadCredentials *structThreadCredentials_ptr = (StructThreadCredentials *)structThreadCredentials;
     User user;
     printf("\n[~] Function VerifyUserAlive\n");
-    int fd = open(BACKEND_FIFO, O_RDONLY);
+    int fd = open(ALIVE_FIFO, O_RDWR);
     if(fd==-1)
     {
         printf("\nError opening reading FIFO");
         return NULL;
     }
+    printf("chegou");
     while(1){
-        User *user_ptr = structThreadCredentials_ptr->user;
+       // User *user_ptr = structThreadCredentials_ptr->user;
         int i=0;
-        Comms comms;
-        int size= read(fd, &comms, sizeof(comms));
+        int rec;
+        int size= read(fd, &rec, sizeof(rec));
+        printf("--size-- %d", size);
         if(size > 0)
-        {
-            if(comms.PID == 0)
-            {
-                break;
-            }
+        { /*
             while(user_ptr != 0)
             {
-                if(user_ptr[i].PID == comms.PID)
+                if(user_ptr[i].PID == rec)
                 {
                     printf("User %s is alive", user_ptr[i].username);
                 }
                 i++;
-            }
+            }*/
+            printf("Alive");
         }
     }
 }
@@ -807,6 +807,13 @@ int main(int argc, char **argv)
         printf("\n[!] Error while creating the backendFrontend FIFO\n");
         return 0;
     }
+     if (mkfifo(ALIVE_FIFO, 0666) == -1)
+    {
+        printf("\n[!] Error while creating the alive FIFO\n");
+        return 0;
+    }
+
+
 
     StructThreadCredentials structThreadCredentials;
     Backend backend;
@@ -890,5 +897,7 @@ int main(int argc, char **argv)
     pthread_exit((void *)NULL);
     unlink(BACKEND_FIFO);
     unlink(BACKEND_FIFO_FRONTEND);
+    unlink(ALIVE_FIFO);
+    
     return 0;
 }
