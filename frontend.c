@@ -164,9 +164,8 @@ void imAlive()
 {
     fflush(stdout);
     Comms comms;
-    comms.PID = getpid();
-    int env = 1234;
-    //comms.message = "imalive";
+    int env = getpid();
+    
    
     int fd = open(ALIVE_FIFO, O_RDWR);
   if(fd == -1)

@@ -700,7 +700,7 @@ void *verifyUserAlive(void *structThreadCredentials)
         int i=0;
         int rec;
         int size= read(fd, &rec, sizeof(rec));
-        printf("--size-- %d", size);
+       // printf("--size-- %d", size);
         if(size > 0)
         { /*
             while(user_ptr != 0)
@@ -711,7 +711,7 @@ void *verifyUserAlive(void *structThreadCredentials)
                 }
                 i++;
             }*/
-            printf("Alive");
+            printf("User with pid[%d] is Alive\n", rec);
         }
     }
 }
