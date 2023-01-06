@@ -3,7 +3,6 @@
 // Notes:
 // 1. Change all exit(EXIT_FAILURE) to quit()
 // 2. Properly name the error messages in order to be easier to debug
-// 3. Item "sold out" doesnt print in all frontends. Make open pipe non block?
 
 int sell(char itemName[], char category[], int basePrice, int buyNowPrice, int duration, char sellerUsername[])
 {
@@ -144,40 +143,6 @@ void quit2()
 void clear()
 {
     system("clear");
-}
-void imAlive()
-{
-
-    printf("hello?");
-
-    Comms comms;
-    comms.PID = getpid();
-    sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, getpid());
-    int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
-    if (fd == -1)
-    {
-        printf("\nError communicating it's alive");
-        quit();
-    }
-    int answer = 1;
-    int size = write(fd, &answer, sizeof(int));
-    if (size == -1)
-    {
-        printf("\nError communicating it's alive");
-        quit();
-    }
-    close(fd);
-}
-void *threadAlive(void *user_ptr)
-{
-    int heartbeat = atoi(getenv("HEARTBEAT"));
-    sleep(heartbeat);
-    // Waiting for signal SIGUSR2 from backend and then sending alive signal SIGUSR1
-    while (1)
-    {
-        signal(SIGUSR2, imAlive);
-    }
-    pthread_exit((void *)NULL);
 }
 void *frontendCommandReader(void *user_ptr)
 {
@@ -562,9 +527,41 @@ void *receiveMessages(void *user_ptr)
     }
     pthread_exit((void *)NULL);
 }
+void imAlive()
+{
+    int env = getpid();
+    int fd = open(ALIVE_FIFO, O_RDWR);
+    if(fd == -1)
+    {
+        printf("\nError communicating it's alive");
+        quit();
+    }
+    //printf("\nPID do frontend %d\n", env);
+    int size = write(fd, &env, sizeof(env));
+    if(size == -1)
+    {
+        printf("\nError communicating it's alive");
+    }
+    close(fd);
+}
+void *threadAlive(void *user_ptr)
+{
+    int heartbeat = atoi(getenv("HEARTBEAT"));
+    
+    while(1)
+    {
+        sleep(heartbeat);
+        imAlive();
+    }
+}
 
 int main(int argc, char **argv)
 {
+    if (getenv("HEARTBEAT") == NULL)
+    {
+        printf("\n[!] Error! HEARTBEAT not defined!\n");
+        return (0);
+    }
     User user;
     signal(SIGINT, quit);
     signal(SIGUSR1, receiveSignal);
@@ -663,14 +660,14 @@ int main(int argc, char **argv)
         perror("Error creating thread");
     }
 
-    /*if (pthread_create(&threadImAlive, NULL, threadAlive, &user) != 0)
+    if (pthread_create(&threadImAlive, NULL, threadAlive, &user) != 0)
     {
         perror("Error creating thread to communicate its alive");
-    }*/
+    }
 
+    pthread_join(threadImAlive, NULL);
     pthread_join(threadBackendComms, NULL);
     pthread_join(threadReceiveMessages, NULL);
-    // pthread_join(threadImAlive, NULL);
 
     return 0;
 }

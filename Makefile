@@ -24,6 +24,7 @@ FifoCleaning:
 	rm backend_fifo
 	rm backend_fifo_frontend
 	rm comms_fifo
+	rm alive_fifo
 
 
 

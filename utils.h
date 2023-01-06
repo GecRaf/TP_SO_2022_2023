@@ -18,6 +18,7 @@
 #define BACKEND_FIFO_FRONTEND "backend_fifo_frontend"
 #define FRONTEND_FIFO "frontend_fifo[%d]"
 #define COMMS_FIFO "comms_fifo"
+#define ALIVE_FIFO "alive_fifo"
 char FRONTEND_FINAL_FIFO[50];
 
 typedef struct structThreadCredentials{
@@ -29,6 +30,7 @@ typedef struct structThreadCredentials{
 
 typedef struct backend{
     int connectedClients;
+    int removeUsersID;
     pthread_mutex_t *mutex;
     int maxPromoters;
     int maxItems;
@@ -41,6 +43,7 @@ typedef struct user{
     int balance;
     int PID;
     int loggedIn;
+    int heartbeating;
     struct user *next;
 }User;
 

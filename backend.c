@@ -3,8 +3,7 @@
 
 // Notes:
 // 1. 'List' command keeps failing sometimes, randomly
-// 2. HEARTBEAT function to be restructured
-// 3. Properly name the error messages in order to be easier to debug
+// 2. Properly name the error messages in order to be easier to debug
 
 int pipeBP[2], pipePB[2];
 int threadCounter = 0;
@@ -32,14 +31,15 @@ void quit(void *user)
             usr = usr->next;
         }
     }
-    
+
     sleep(1);
     unlink(BACKEND_FIFO);
     unlink(BACKEND_FIFO_FRONTEND);
     unlink(COMMS_FIFO);
-    
+    unlink(ALIVE_FIFO);
+
     close(pipePB[0]);
-    for(int i = 0; i < promotorPIDArrayIndex; i++)
+    for (int i = 0; i < promotorPIDArrayIndex; i++)
     {
         kill(promotorPIDArray[i], SIGUSR1);
         waitpid(promotorPIDArray[i], NULL, 0);
@@ -78,6 +78,7 @@ void listUsers(void *user)
         fscanf(f, "%s %s %d", usr->username, usr->password, &usr->balance);
         usr->loggedIn = 0;
         usr->PID = 0;
+        usr->heartbeating = 1;
         usr->next = (User *)malloc(sizeof(User));
         updateUserBalance(usr->username, usr->balance - 1);
         usr = usr->next;
@@ -266,7 +267,6 @@ void launchPromotersThreads(void *structThreadCredentials, pthread_t *threadProm
 {
     StructThreadCredentials *mainStruct = (StructThreadCredentials *)structThreadCredentials;
     Promotor *prt = (Promotor *)mainStruct->promotor;
-    
 
     while (threadCounter != 0)
     {
@@ -343,8 +343,8 @@ void reprom(void *structThreadCredentials, pthread_t *threadPromotor)
     while (fgets(line, 100, f) == line)
     {
         prt = (Promotor *)mainStruct->promotor;
-        //printf("\n\t\t[~] %s\n", line);
-        // Check if line as \n and remove it
+        // printf("\n\t\t[~] %s\n", line);
+        //  Check if line as \n and remove it
         if (line[strlen(line) - 1] == '\n')
             line[strlen(line) - 1] = '\0';
 
@@ -384,7 +384,7 @@ void reprom(void *structThreadCredentials, pthread_t *threadPromotor)
         }
     }
     prt = (Promotor *)mainStruct->promotor;
-    for(int i = 0; i < maxPromotors; i++)
+    for (int i = 0; i < maxPromotors; i++)
     {
         if (strcmp(prt->path, "") != 0 && prt->active != 3 && prt->active != 2)
         {
@@ -397,7 +397,7 @@ void reprom(void *structThreadCredentials, pthread_t *threadPromotor)
         prt = prt->next;
     }
     prt = (Promotor *)mainStruct->promotor;
-    for(int i = 0; i < maxPromotors; i++)
+    for (int i = 0; i < maxPromotors; i++)
     {
         if (strcmp(prt->path, "") != 0 && prt->active == 3)
         {
@@ -411,7 +411,6 @@ void reprom(void *structThreadCredentials, pthread_t *threadPromotor)
         printf("\n\t\t[!] No new promoters found\n");
     fclose(f);
     printf("\n");
-
 }
 void cancelPromotor(void *structThreadCredentials, pthread_t *threadPromotor, char path[])
 {
@@ -846,7 +845,7 @@ void *frontendComms(void *structThreadCredentials)
                     quit(NULL);
                 }
                 close(fd);
-                
+
                 int id = 0;
                 while (item_ptr != NULL)
                 {
@@ -881,7 +880,6 @@ void *frontendComms(void *structThreadCredentials)
                             quit(NULL);
                         }
                         close(fd2);
-                        
 
                         break;
                     }
@@ -1106,6 +1104,30 @@ void *frontendComms(void *structThreadCredentials)
     pthread_exit((void *)NULL);
     close(fd);
 }
+void *removeUserNotAlive(void *structThreadCredentials)
+{
+    StructThreadCredentials *structThreadCredentials_ptr = (StructThreadCredentials *)structThreadCredentials;
+    User *user_ptr = (User *)structThreadCredentials_ptr->user;
+    int heartbeat = atoi(getenv("HEARTBEAT"));
+
+    while (1)
+    {
+        sleep(heartbeat+10); // This was working with 10 seconds here and 3 seconsds in the frontend [IN CASE OF FAILING, TRY TO CHANGE THIS]
+        User *user_ptr = (User *)structThreadCredentials_ptr->user;
+        while (user_ptr != NULL)
+        {
+            if (user_ptr->heartbeating == 0 && user_ptr->loggedIn == 1)
+            {
+                user_ptr->loggedIn = 0;
+                printf("\n\t[~] User '%s' has been removed from the system\n", user_ptr->username);
+                user_ptr->heartbeating = 1;
+            }
+            user_ptr->heartbeating = 0;
+            user_ptr = user_ptr->next;
+        }
+    }
+    pthread_exit((void *)NULL);
+}
 void *verifyCredentials(void *structThreadCredentials)
 {
     FILE *f;
@@ -1157,6 +1179,7 @@ void *verifyCredentials(void *structThreadCredentials)
                         {
                             result = 1;
                             printf("\n\n[~] User %s logged in\n", user_ptr->username);
+                            user_ptr->heartbeating = 1;
                             user_ptr->loggedIn = 1;
                             user_ptr->PID = user.PID;
                             // Store PID in the global variable
@@ -1210,56 +1233,6 @@ void *verifyCredentials(void *structThreadCredentials)
     close(fd);
     pthread_exit((void *)NULL);
 }
-void *verifyUserAlive(void *structThreadCredentials)
-{
-    StructThreadCredentials *structThreadCredentials_ptr = (StructThreadCredentials *)structThreadCredentials;
-    User user;
-    Comms comms;
-    printf("\n[~] Function VerifyUserAlive\n");
-    int heartbeat = atoi(getenv("HEARTBEAT"));
-    printf("\n[~] Heartbeat: %d\n", heartbeat);
-
-    // Send signal SIGURS2 to frontend and wait for signal SIGURS1
-    // If signal SIGURS1 is not received in 5 seconds, the user is considered dead
-    // If the user is dead, the user is removed from the list of connected users
-
-    while (1)
-    {
-        sleep(heartbeat);
-        User *user_ptr = (User *)structThreadCredentials_ptr->user;
-        while (user_ptr != NULL)
-        {
-            if (user_ptr->loggedIn == 1)
-            {
-                printf("\n[~] Sending signal to frontend\n");
-                kill(user_ptr->PID, SIGUSR2);
-                // If the user is alive we will receive a struct comms through the pipe BACKEND_FIFO
-                // If the user is dead we will not receive a struct comms through the pipe BACKEND_FIFO
-                int fd = open(BACKEND_FIFO, O_RDONLY);
-                if (fd == -1)
-                {
-                    printf("\n[!] Error while opening pipe BACKEND_FIFO\n");
-                    exit(EXIT_FAILURE);
-                }
-                int size = read(fd, &comms, sizeof(comms));
-                if (size > 0)
-                {
-                    printf("\n[~] User %s is alive\n", comms.username);
-                }
-                else
-                {
-                    printf("\n[~] User %s is dead\n", user_ptr->username);
-                    user_ptr->loggedIn = 0;
-                    user_ptr->PID = 0;
-                    structThreadCredentials_ptr->backend->connectedClients--;
-                }
-            }
-            user_ptr = user_ptr->next;
-        }
-    }
-
-    pthread_exit((void *)NULL);
-}
 void crtlCSignal()
 {
     for (int i = 0; i < frontendPIDArrayIndex; i++)
@@ -1291,14 +1264,17 @@ void *itemActions(void *structThreadCredentials)
                 {
                     item_ptr->duration--;
                 }
-                else if(item_ptr->duration == 0)
+                else if (item_ptr->duration == 0)
                 {
                     item_ptr->duration = -1;
                     // Print this only once
-                    if(item_ptr->duration == -1){
+                    if (item_ptr->duration == -1)
+                    {
                         printf("\n\n\t[~] Item '%s' with ID '%d' timed out\n\n", item_ptr->name, item_ptr->id);
-                        while(user_ptr != NULL){
-                            if(user_ptr->loggedIn == 1){
+                        while (user_ptr != NULL)
+                        {
+                            if (user_ptr->loggedIn == 1)
+                            {
                                 char FRONTEND_FINAL_FIFO[100];
                                 sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, user_ptr->PID);
                                 int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
@@ -1328,6 +1304,41 @@ void *itemActions(void *structThreadCredentials)
         }
         pthread_mutex_unlock(backend_ptr->mutex);
     }
+    pthread_exit((void *)NULL);
+}
+void *verifyUserAlive(void *structThreadCredentials)
+{
+    StructThreadCredentials *structThreadCredentials_ptr = (StructThreadCredentials *)structThreadCredentials;
+    User *user_ptr = (User *)structThreadCredentials_ptr->user;
+    int rec = 0;
+    char message[100];
+    int fd = open(ALIVE_FIFO, O_RDWR);
+    if (fd == -1)
+    {
+        printf("\nError opening reading FIFO");
+        return NULL;
+    }
+    while (1)
+    {
+        user_ptr = (User *)structThreadCredentials_ptr->user;
+        int size = read(fd, &rec, sizeof(rec));
+        if (size > 0)
+        {
+            while (user_ptr != NULL)
+            {
+                if (user_ptr->PID == rec)
+                {
+                    if (user_ptr->loggedIn == 1)
+                    {
+                        //printf("\n[~] User '%s' is alive\n", user_ptr->username);
+                        user_ptr->heartbeating = 1;
+                    }
+                }
+                user_ptr = user_ptr->next;
+            }
+        }
+    }
+    close(fd);
     pthread_exit((void *)NULL);
 }
 
@@ -1392,6 +1403,11 @@ int main(int argc, char **argv)
         printf("\n[!] Error while creating the backendFrontend FIFO\n");
         return 0;
     }
+    if (mkfifo(ALIVE_FIFO, 0666) == -1)
+    {
+        printf("\n[!] Error while creating the alive FIFO\n");
+        return 0;
+    }
 
     StructThreadCredentials structThreadCredentials;
     Backend backend;
@@ -1417,6 +1433,7 @@ int main(int argc, char **argv)
     pthread_t threadFrontendComms;
     pthread_t threadItemActions;
     pthread_t verifyAlive;
+    pthread_t removeUser;
     pthread_mutex_t mutex;
     pthread_mutex_init(&mutex, NULL);
     backend.mutex = &mutex;
@@ -1437,10 +1454,15 @@ int main(int argc, char **argv)
     if (pthread_create(&threadItemActions, NULL, itemActions, &structThreadCredentials) != 0)
         perror("Error creating thread 'threadItemActions'");
 
-    /*if(pthread_create(&verifyAlive, NULL, verifyUserAlive, &structThreadCredentials)!=0)
+    if (pthread_create(&verifyAlive, NULL, verifyUserAlive, &structThreadCredentials) != 0)
     {
         perror("Error creating thread");
-    }*/
+    }
+
+    if (pthread_create(&removeUser, NULL, removeUserNotAlive, &structThreadCredentials) != 0)
+    {
+        perror("Error creating thread");
+    }
 
     // Signal handler
 
@@ -1464,7 +1486,8 @@ int main(int argc, char **argv)
     pthread_join(threadCredentials, NULL);
     pthread_join(threadFrontendComms, NULL);
     pthread_join(threadItemActions, NULL);
-    // pthread_join(verifyAlive, NULL);
+    pthread_join(verifyAlive, NULL);
+    pthread_join(removeUser, NULL);
     pthread_mutex_destroy(&mutex);
 
     // FIFO unlink
@@ -1472,6 +1495,6 @@ int main(int argc, char **argv)
     unlink(BACKEND_FIFO);
     unlink(BACKEND_FIFO_FRONTEND);
     unlink(COMMS_FIFO);
-
+    unlink(ALIVE_FIFO);
     return 0;
 }
