@@ -2,7 +2,6 @@
 
 // Notes:
 // 1. Change all exit(EXIT_FAILURE) to quit()
-// 2. Properly name the error messages in order to be easier to debug
 
 int sell(char itemName[], char category[], int basePrice, int buyNowPrice, int duration, char sellerUsername[])
 {
@@ -19,13 +18,13 @@ int sell(char itemName[], char category[], int basePrice, int buyNowPrice, int d
     int fd = open(BACKEND_FIFO_FRONTEND, O_WRONLY);
     if (fd == -1)
     {
-        printf("\n[!] Error opening backend fifo BACKEND_FIFO_FRONTEND\n\n");
+        printf("\n\t[!] Error while opening pipe '%s' [func: sell]\n", BACKEND_FIFO_FRONTEND);
         exit(EXIT_FAILURE);
     }
     int size = write(fd, &item, sizeof(Item));
     if (size == -1)
     {
-        printf("\n[!] Error writing to backend fifo BACKEND_FIFO_FRONTEND\n\n");
+        printf("\n\t[!] Error while writing to pipe '%s' [func: sell]\n", BACKEND_FIFO_FRONTEND);
         exit(EXIT_FAILURE);
     }
     close(fd);
@@ -34,13 +33,13 @@ int sell(char itemName[], char category[], int basePrice, int buyNowPrice, int d
     fd = open(FRONTEND_FINAL_FIFO, O_RDONLY);
     if (fd == -1)
     {
-        printf("\n[!] Error opening frontend fifo FRONTEND_FINAL_FIFO\n\n");
+        printf("\n\t[!] Error while opening pipe '%s' [func: sell]\n", FRONTEND_FINAL_FIFO);
         exit(EXIT_FAILURE);
     }
     size = read(fd, &item, sizeof(Item));
     if (size == -1)
     {
-        printf("\n[!] Error reading from frontend fifo FRONTEND_FINAL_FIFO\n\n");
+        printf("\n\t[!] Error while reading from pipe '%s' [func: sell]\n", FRONTEND_FINAL_FIFO);
         exit(EXIT_FAILURE);
     }
     close(fd);
@@ -58,13 +57,13 @@ void list()
     int fd = open(FRONTEND_FINAL_FIFO, O_RDONLY);
     if (fd == -1)
     {
-        printf("\n[!] Error opening backend fifo BACKEND_FIFO_FRONTEND\n\n");
+        printf("\n\t[!] Error while opening pipe '%s' [func: list]\n", BACKEND_FIFO_FRONTEND);
         exit(EXIT_FAILURE);
     }
     int size = read(fd, &item, sizeof(Item));
     if (size == -1)
     {
-        printf("\n[!] Error reading from backend fifo BACKEND_FIFO_FRONTEND\n\n");
+        printf("\n\t[!] Error while reading from pipe '%s' [func: list]\n", BACKEND_FIFO_FRONTEND);
         exit(EXIT_FAILURE);
     }
     close(fd);
@@ -89,13 +88,13 @@ void list()
         fd = open(FRONTEND_FINAL_FIFO, O_RDONLY);
         if (fd == -1)
         {
-            printf("\n[!] Error opening backend fifo BACKEND_FIFO_FRONTEND\n\n");
+            printf("\n\t[!] Error while opening pipe '%s' [func: list]\n", BACKEND_FIFO_FRONTEND);
             exit(EXIT_FAILURE);
         }
         size = read(fd, &item, sizeof(Item));
         if (size == -1)
         {
-            printf("\n[!] Error reading from backend fifo BACKEND_FIFO_FRONTEND\n\n");
+            printf("\n\t[!] Error while reading from pipe '%s' [func: list]\n", BACKEND_FIFO_FRONTEND);
             exit(EXIT_FAILURE);
         }
         close(fd);
@@ -117,13 +116,13 @@ void quit()
     int fd = open(BACKEND_FIFO_FRONTEND, O_WRONLY);
     if (fd == -1)
     {
-        printf("\n[!] Error opening backend fifo BACKEND_FIFO_FRONTEND\n\n");
+        printf("\n\t[!] Error while opening pipe '%s' [func: quit]\n", BACKEND_FIFO_FRONTEND);
         exit(EXIT_FAILURE);
     }
     int size = write(fd, &comms, sizeof(Comms));
     if (size == -1)
     {
-        printf("\n[!] Error writing to backend fifo BACKEND_FIFO_FRONTEND\n\n");
+        printf("\n\t[!] Error while writing to pipe '%s' [func: quit]\n", BACKEND_FIFO_FRONTEND);
         exit(EXIT_FAILURE);
     }
     close(fd);
@@ -155,7 +154,7 @@ void *frontendCommandReader(void *user_ptr)
     int fd = open(BACKEND_FIFO_FRONTEND, O_WRONLY);
     if (fd == -1)
     {
-        printf("\n[!] Error opening backend fifo BACKEND_FIFO_FRONTEND\n\n");
+        printf("\n\t[!] Error while opening pipe '%s' [func: frontendCommandReader]\n", BACKEND_FIFO_FRONTEND);
         exit(EXIT_FAILURE);
     }
     clear();
@@ -207,7 +206,7 @@ void *frontendCommandReader(void *user_ptr)
                 int size = write(fd, &comms, sizeof(comms));
                 if (size == -1)
                 {
-                    printf("\n\t[!] Error writing to backend fifo\n\n");
+                    printf("\n\t[!] Error while writing to pipe '%s' [func: frontendCommandReader | command: sell]\n", BACKEND_FIFO_FRONTEND);
                     exit(EXIT_FAILURE);
                 }
                 int success = sell(itemName, category, basePrice, buyNowPrice, duration, usr->username); // Puts item to sell
@@ -229,7 +228,7 @@ void *frontendCommandReader(void *user_ptr)
             int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
-                printf("\n\t[!] Error writing to backend fifo\n\n");
+                printf("\n\t[!] Error while writing to pipe '%s' [func: frontendCommandReader | command: list]\n", BACKEND_FIFO_FRONTEND);
                 exit(EXIT_FAILURE);
             }
             list(); // Lists available items
@@ -247,7 +246,7 @@ void *frontendCommandReader(void *user_ptr)
             int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
-                printf("\n\t[!] Error writing to backend fifo\n\n");
+                printf("\n\t[!] Error while writing to pipe '%s' [func: frontendCommandReader | command: licat]\n", BACKEND_FIFO_FRONTEND);
                 exit(EXIT_FAILURE);
             }
             list(); // Lists available per category
@@ -265,7 +264,7 @@ void *frontendCommandReader(void *user_ptr)
             int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
-                printf("\n\t[!] Error writing to backend fifo\n\n");
+                printf("\n\t[!] Error while writing to pipe '%s' [func: frontendCommandReader | command: lisel]\n", BACKEND_FIFO_FRONTEND);
                 exit(EXIT_FAILURE);
             }
             list(); // Lists specific seller items
@@ -284,7 +283,7 @@ void *frontendCommandReader(void *user_ptr)
             int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
-                printf("\n\t[!] Error writing to backend fifo\n\n");
+                printf("\n\t[!] Error while writing to pipe '%s' [func: frontendCommandReader | command: lival]\n", BACKEND_FIFO_FRONTEND);
                 exit(EXIT_FAILURE);
             }
             list(); // Lists items until a certain price range
@@ -303,7 +302,7 @@ void *frontendCommandReader(void *user_ptr)
             int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
-                printf("\n\t[!] Error writing to backend fifo\n\n");
+                printf("\n\t[!] Error while writing to pipe '%s' [func: frontendCommandReader | command: litime]\n", BACKEND_FIFO_FRONTEND);
                 exit(EXIT_FAILURE);
             }
             list(); // Lists available until a certain hour
@@ -315,7 +314,7 @@ void *frontendCommandReader(void *user_ptr)
             int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
-                printf("\n\t[!] Error writing to backend fifo\n\n");
+                printf("\n\t[!] Error while writing to pipe '%s' [func: frontendCommandReader | command: time]\n", BACKEND_FIFO_FRONTEND);
                 exit(EXIT_FAILURE);
             }
         }
@@ -337,21 +336,21 @@ void *frontendCommandReader(void *user_ptr)
             int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
-                printf("\n\t[!] Error writing to backend fifo\n\n");
+                printf("\n\t[!] Error while writing to pipe '%s' [func: frontendCommandReader | command: buy]\n", BACKEND_FIFO_FRONTEND);
                 exit(EXIT_FAILURE);
             }
             sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, pid);
             int fd2 = open(FRONTEND_FINAL_FIFO, O_RDONLY);
             if (fd2 == -1)
             {
-                printf("\n\t[!] Error opening frontend fifo\n\n");
+                printf("\n\t[!] Error while opening pipe '%s' [func: frontendCommandReader | command: buy]\n", FRONTEND_FINAL_FIFO);
                 exit(EXIT_FAILURE);
             }
             // Read from frontend fifo
             int size2 = read(fd2, &comms, sizeof(comms));
             if (size2 == -1)
             {
-                printf("\n\t[!] Error reading from frontend fifo\n\n");
+                printf("\n\t[!] Error while reading from pipe '%s' [func: frontendCommandReader | command: buy]\n", FRONTEND_FINAL_FIFO);
                 exit(EXIT_FAILURE);
             }
             if (comms.buyID == 1)
@@ -378,7 +377,7 @@ void *frontendCommandReader(void *user_ptr)
             int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
-                printf("\n\t[!] Error writing to backend fifo\n\n");
+                printf("\n\t[!] Error while writing to pipe '%s' [func: frontendCommandReader | command: cash]\n", BACKEND_FIFO_FRONTEND);
                 exit(EXIT_FAILURE);
             }
             // Open frontend fifo
@@ -386,14 +385,14 @@ void *frontendCommandReader(void *user_ptr)
             int fd2 = open(FRONTEND_FINAL_FIFO, O_RDONLY);
             if (fd2 == -1)
             {
-                printf("\n\t[!] Error opening frontend fifo\n\n");
+                printf("\n\t[!] Error while opening pipe '%s' [func: frontendCommandReader | command: cash]\n", FRONTEND_FINAL_FIFO);
                 exit(EXIT_FAILURE);
             }
             // Read from frontend fifo
             int size2 = read(fd2, &comms, sizeof(comms));
             if (size2 == -1)
             {
-                printf("\n\t[!] Error reading from frontend fifo\n\n");
+                printf("\n\t[!] Error while reading from pipe '%s' [func: frontendCommandReader | command: cash]\n", FRONTEND_FINAL_FIFO);
                 exit(EXIT_FAILURE);
             }
             printf("\n\t[~] Your current balance is: %d euros \n\n", comms.balance);
@@ -414,7 +413,7 @@ void *frontendCommandReader(void *user_ptr)
             int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
-                printf("\n[!] Error writing to backend fifo\n\n");
+                printf("\n\t[!] Error while writing to pipe '%s' [func: frontendCommandReader | command: add]\n", BACKEND_FIFO_FRONTEND);
                 exit(EXIT_FAILURE);
             }
             // Read from frontend fifo the new balance
@@ -422,13 +421,13 @@ void *frontendCommandReader(void *user_ptr)
             int fd2 = open(FRONTEND_FINAL_FIFO, O_RDONLY);
             if (fd2 == -1)
             {
-                printf("\n\t[!] Error opening frontend fifo\n\n");
+                printf("\n\t[!] Error while opening pipe '%s' [func: frontendCommandReader | command: add]\n", FRONTEND_FINAL_FIFO);
                 exit(EXIT_FAILURE);
             }
             int size2 = read(fd2, &comms, sizeof(comms));
             if (size2 == -1)
             {
-                printf("\n\t[!] Error reading from frontend fifo\n\n");
+                printf("\n\t[!] Error while reading from pipe '%s' [func: frontendCommandReader | command: add]\n", FRONTEND_FINAL_FIFO);
                 exit(EXIT_FAILURE);
             }
             printf("\n\t[+] %d euros added to your balance\n", value);
@@ -441,7 +440,7 @@ void *frontendCommandReader(void *user_ptr)
             int size = write(fd, &comms, sizeof(comms));
             if (size == -1)
             {
-                printf("\n\t[!] Error writing to backend fifo\n\n");
+                printf("\n\t[!] Error while writing to pipe '%s' [func: frontendCommandReader | command: add]\n", BACKEND_FIFO_FRONTEND);
                 exit(EXIT_FAILURE);
             }
             quit();
@@ -501,7 +500,7 @@ void *receiveMessages(void *user_ptr)
     int comms_fd = open(FRONTEND_FINAL_FIFO, O_RDONLY);
     if (comms_fd == -1)
     {
-        printf("\n\t[!] Error opening comms fifo\n\n");
+        printf("\n\t[!] Error while opening pipe '%s' [func: receiveMessages]\n", FRONTEND_FINAL_FIFO);
         quit();
     }
 
@@ -510,7 +509,7 @@ void *receiveMessages(void *user_ptr)
         int size = read(comms_fd, &comms, sizeof(comms));
         if (size == -1)
         {
-            printf("\n\t[!] Error reading from comms fifo\n\n");
+            printf("\n\t[!] Error while reading from pipe '%s' [func: receiveMessages]\n", FRONTEND_FINAL_FIFO);
             quit();
         }
         if (size > 0)
@@ -533,14 +532,14 @@ void imAlive()
     int fd = open(ALIVE_FIFO, O_RDWR);
     if(fd == -1)
     {
-        printf("\nError communicating it's alive");
+        printf("\n\t[!] Error while opening pipe '%s' [func: imAlive]\n", ALIVE_FIFO);
         quit();
     }
     //printf("\nPID do frontend %d\n", env);
     int size = write(fd, &env, sizeof(env));
     if(size == -1)
     {
-        printf("\nError communicating it's alive");
+        printf("\n\t[!] Error while reading from pipe '%s' [func: imAlive]\n", ALIVE_FIFO);
     }
     close(fd);
 }
@@ -585,7 +584,7 @@ int main(int argc, char **argv)
     sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, getpid());
     if (mkfifo(FRONTEND_FINAL_FIFO, 0666) == -1)
     {
-        printf("\n[!] Error creating frontend fifo!\n");
+        printf("\n[!] Error creating the frontend FIFO!\n");
         return 0;
     }
 
@@ -597,13 +596,13 @@ int main(int argc, char **argv)
     int fd = open(BACKEND_FIFO, O_WRONLY);
     if (fd == -1)
     {
-        printf("\n[!] Error opening frontend fifo\n");
+        printf("\n\t[!] Error while opening pipe '%s' [func: main]\n", BACKEND_FIFO);
         return 1;
     }
     int size = write(fd, &user, sizeof(user));
     if (size == -1)
     {
-        printf("\n[!] Error writing to backend fifo\n");
+        printf("\n\t[!] Error while writing to pipe '%s' [func: main]\n", BACKEND_FIFO);
         return 1;
     }
     close(fd);
@@ -612,11 +611,16 @@ int main(int argc, char **argv)
     int fd2 = open(FRONTEND_FINAL_FIFO, O_RDONLY);
     if (fd2 == -1)
     {
-        printf("\n[!] Error opening backend fifo\n");
+        printf("\n\t[!] Error while opening pipe '%s' [func: main]\n", FRONTEND_FINAL_FIFO);
         return 1;
     }
     int success;
-    read(fd2, &success, sizeof(int));
+    int size2 = read(fd2, &success, sizeof(int));
+    if (size2 == -1)
+    {
+        printf("\n\t[!] Error while reading from pipe '%s' [func: main]\n", FRONTEND_FINAL_FIFO);
+        return 1;
+    }
     sleep(2);
     close(fd2);
 
@@ -652,17 +656,17 @@ int main(int argc, char **argv)
 
     if (pthread_create(&threadBackendComms, NULL, frontendCommandReader, &user) != 0)
     {
-        perror("Error creating thread");
+        perror("Error creating thread 'threadBackendComms''");
     }
 
     if (pthread_create(&threadReceiveMessages, NULL, receiveMessages, &user) != 0)
     {
-        perror("Error creating thread");
+        perror("Error creating thread 'threadReceiveMessages'");
     }
 
     if (pthread_create(&threadImAlive, NULL, threadAlive, &user) != 0)
     {
-        perror("Error creating thread to communicate its alive");
+        perror("Error creating thread 'threadImAlive'");
     }
 
     pthread_join(threadImAlive, NULL);

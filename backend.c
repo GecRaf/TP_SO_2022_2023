@@ -3,7 +3,6 @@
 
 // Notes:
 // 1. 'List' command keeps failing sometimes, randomly
-// 2. Properly name the error messages in order to be easier to debug
 
 int pipeBP[2], pipePB[2];
 int threadCounter = 0;
@@ -54,7 +53,7 @@ void listUsers(void *user)
     char *usersFile = getenv("FUSERS");
     if (loadUsersFile(usersFile) == -1)
     {
-        printf("\n\t[!] Error while loading users file\n");
+        printf("\n\t[!] Error while loading users file [func: listUsers]\n");
         quit(NULL);
     }
     else
@@ -70,7 +69,7 @@ void listUsers(void *user)
     f = fopen(usersFile, "r");
     if (f == NULL)
     {
-        printf("\n\t[!] Error while opening file ' users '\n");
+        printf("\n\t[!] Error while opening file ' users ' [func: listUsers]\n");
         quit(NULL);
     }
     for (int i = 0; i < maxUsers; i++)
@@ -168,7 +167,7 @@ void *promotorComms(void *prom)
         close(pipePB[1]); // Close pipePB[1]
         if (execl(promotorsExecutablesPath, promotorsExecutablesPath, NULL) == -1)
         {
-            printf("\n\t[!] Error while executing ' %s '\n", promotorsExecutablesPath);
+            printf("\n\t[!] Error while executing ' %s ' [func: promotorComms]\n", promotorsExecutablesPath);
             quit(NULL);
         }
     }
@@ -177,7 +176,7 @@ void *promotorComms(void *prom)
         promotor->PID = pid;
         promotorPIDArray[promotorPIDArrayIndex] = pid;
         promotorPIDArrayIndex++;
-        printf("\n\t[~] Promotor '%s' PID '%5d'\n", promotorsExecutablesPath, pid);
+        //printf("\n\t[~] Promotor '%s' PID '%5d'\n", promotorsExecutablesPath, pid);
         int flag = 1;
         while (flag) // Review
         {
@@ -228,7 +227,7 @@ void readPromoters(void *prt)
     f = fopen(promotersFile, "r");
     if (f == NULL)
     {
-        printf("\n\t[!] Error while opening file %s\n", promotersFile);
+        printf("\n\t[!] Error while opening file '%s' [func: readPromoters]\n", promotersFile);
         quit(NULL);
     }
 
@@ -274,7 +273,7 @@ void launchPromotersThreads(void *structThreadCredentials, pthread_t *threadProm
         {
             // Create thread for each promotor and send the exact promotor struct pointer
             if (pthread_create(&threadPromotor[threadCounter], NULL, (void *)promotorComms, (void *)prt) != 0)
-                perror("Error creating thread");
+                perror("Error creating thread promotor");
             printf("\n\t[+] Promotor thread created '%s'\n", prt->path);
             prt->active = 1;
             prt->threadID = threadCounter;
@@ -330,7 +329,7 @@ void reprom(void *structThreadCredentials, pthread_t *threadPromotor)
     f = fopen(promotersFile, "r");
     if (f == NULL)
     {
-        printf("\n[!] Error while opening file %s\n", promotersFile);
+        printf("\n[!] Error while opening file '%s' [func: reprom]\n", promotersFile);
         quit(NULL);
     }
 
@@ -578,12 +577,12 @@ void readItemsFile(void *item)
     f = fopen(itemsFile, "r");
     if (f == NULL)
     {
-        printf("\n[!] Error while opening the file ' items '\n");
+        printf("\n[!] Error while opening the file 'items' [func: readItemsFile]\n");
         quit(NULL);
     }
     else
     {
-        printf("\n\t[~] Successuflly loaded file ' items '\n");
+        printf("\n\t[~] Successuflly loaded file 'items' [func: readItemsFile]\n");
     }
 
     int count = 0;
@@ -624,7 +623,7 @@ void *frontendComms(void *structThreadCredentials)
     int fd = open(BACKEND_FIFO_FRONTEND, O_RDONLY);
     if (fd == -1)
     {
-        printf("\n\r[!] Error while opening pipe BACKEND_FIFO_FRONTEND\n");
+        printf("\n\r[!] Error while opening pipe 'BACKEND_FIFO_FRONTEND' [func: frontendComms]\n");
         quit(NULL);
     }
 
@@ -668,13 +667,13 @@ void *frontendComms(void *structThreadCredentials)
                             int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
                             if (fd == -1)
                             {
-                                printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                                printf("\n\t[!] Error while opening pipe '%s' [func: frontendComms | command: buy]\n", FRONTEND_FINAL_FIFO);
                                 quit(NULL);
                             }
                             int size2 = write(fd, &comms, sizeof(comms));
                             if (size2 == -1)
                             {
-                                printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                                printf("\n\t[!] Error while writing to pipe '%s' [func: frontendComms | command: buy]\n", FRONTEND_FINAL_FIFO);
                                 quit(NULL);
                             }
                             close(fd);
@@ -701,13 +700,13 @@ void *frontendComms(void *structThreadCredentials)
                                         int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
                                         if (fd == -1)
                                         {
-                                            printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                                            printf("\n\t[!] Error while opening pipe '%s' [func: frontendComms | command: buy]\n", FRONTEND_FINAL_FIFO);
                                             quit(NULL);
                                         }
                                         int size2 = write(fd, &comms, sizeof(comms));
                                         if (size2 == -1)
                                         {
-                                            printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                                            printf("\n\t[!] Error while writing to pipe '%s' [func: frontendComms | command: buy]\n", FRONTEND_FINAL_FIFO);
                                             quit(NULL);
                                         }
                                         close(fd);
@@ -723,13 +722,13 @@ void *frontendComms(void *structThreadCredentials)
                                         int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
                                         if (fd == -1)
                                         {
-                                            printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                                            printf("\n\t[!] Error while opening pipe '%s' [func: frontendComms | command: buy]\n", FRONTEND_FINAL_FIFO);
                                             quit(NULL);
                                         }
                                         int size2 = write(fd, &comms, sizeof(comms));
                                         if (size2 == -1)
                                         {
-                                            printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                                            printf("\n\t[!] Error while writing to pipe '%s' [func: frontendComms | command: buy]\n", FRONTEND_FINAL_FIFO);
                                             quit(NULL);
                                         }
                                         close(fd);
@@ -751,13 +750,13 @@ void *frontendComms(void *structThreadCredentials)
                                         int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
                                         if (fd == -1)
                                         {
-                                            printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                                            printf("\n\t[!] Error while opening pipe '%s' [func: frontendComms | command: buy]\n", FRONTEND_FINAL_FIFO);
                                             quit(NULL);
                                         }
                                         int size2 = write(fd, &comms, sizeof(comms));
                                         if (size2 == -1)
                                         {
-                                            printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                                            printf("\n\t[!] Error while writing to pipe '%s' [func: frontendComms | command: buy]\n", FRONTEND_FINAL_FIFO);
                                             quit(NULL);
                                         }
                                         close(fd);
@@ -783,13 +782,13 @@ void *frontendComms(void *structThreadCredentials)
                         int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
                         if (fd == -1)
                         {
-                            printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                            printf("\n\t[!] Error while opening pipe '%s' [func: frontendComms | command: cash]\n", FRONTEND_FINAL_FIFO);
                             quit(NULL);
                         }
                         int size2 = write(fd, &comms, sizeof(comms));
                         if (size2 == -1)
                         {
-                            printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                            printf("\n\t[!] Error while writing to pipe '%s' [func: frontendComms | command: cash]\n", FRONTEND_FINAL_FIFO);
                             quit(NULL);
                         }
                         close(fd);
@@ -817,14 +816,14 @@ void *frontendComms(void *structThreadCredentials)
                 int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
                 if (fd == -1)
                 {
-                    printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                    printf("\n\t[!] Error while opening pipe '%s' [func: frontendComms | command: add]\n", FRONTEND_FINAL_FIFO);
                     quit(NULL);
                 }
                 // Write comms to frontend
                 int size2 = write(fd, &comms, sizeof(comms));
                 if (size2 == -1)
                 {
-                    printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                    printf("\n\t[!] Error while writing to pipe '%s' [func: frontendComms | command: add]\n", FRONTEND_FINAL_FIFO);
                     quit(NULL);
                 }
                 close(fd);
@@ -835,13 +834,13 @@ void *frontendComms(void *structThreadCredentials)
                 int fd = open(BACKEND_FIFO_FRONTEND, O_RDONLY);
                 if (fd == -1)
                 {
-                    printf("\n\t[!] Error while opening pipe BACKEND_FIFO_FRONTEND\n");
+                    printf("\n\t[!] Error while opening pipe '%s' [func: frontendComms | command: sell]\n", BACKEND_FIFO_FRONTEND);
                     quit(NULL);
                 }
                 int size = read(fd, &it, sizeof(it));
                 if (size == -1)
                 {
-                    printf("\n\t[!] Error while reading from pipe BACKEND_FIFO_FRONTEND\n");
+                    printf("\n\t[!] Error while reading from pipe '%s' [func: frontendComms | command: sell]\n", BACKEND_FIFO_FRONTEND);
                     quit(NULL);
                 }
                 close(fd);
@@ -869,14 +868,14 @@ void *frontendComms(void *structThreadCredentials)
                         int fd2 = open(FRONTEND_FINAL_FIFO, O_WRONLY);
                         if (fd2 == -1)
                         {
-                            printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                            printf("\n\t[!] Error while opening pipe '%s' [func: frontendComms | command: sell]\n", FRONTEND_FINAL_FIFO);
                             quit(NULL);
                         }
                         printf("\t[~] Item '%s' added to the database with ID %d\n", it.name, it.id);
                         int size2 = write(fd2, &it, sizeof(it));
                         if (size2 == -1)
                         {
-                            printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                            printf("\n\t[!] Error while writing to pipe '%s' [func: frontendComms | command: sell]\n", FRONTEND_FINAL_FIFO);
                             quit(NULL);
                         }
                         close(fd2);
@@ -901,13 +900,13 @@ void *frontendComms(void *structThreadCredentials)
                         int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
                         if (fd == -1)
                         {
-                            printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                            printf("\n\t[!] Error while opening pipe '%s' [func: frontendComms | command: list]\n", FRONTEND_FINAL_FIFO);
                             quit(NULL);
                         }
                         int size2 = write(fd, item_ptr, sizeof(Item));
                         if (size2 == -1)
                         {
-                            printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                            printf("\n\t[!] Error while writing to pipe '%s' [func: frontendComms | command: list]\n", FRONTEND_FINAL_FIFO);
                             quit(NULL);
                         }
                         close(fd);
@@ -920,13 +919,13 @@ void *frontendComms(void *structThreadCredentials)
                 int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
                 if (fd == -1)
                 {
-                    printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                    printf("\n\t[!] Error while opening pipe '%s' [func: frontendComms | command: list]\n", FRONTEND_FINAL_FIFO);
                     quit(NULL);
                 }
                 int size2 = write(fd, &end, sizeof(Item));
                 if (size2 == -1)
                 {
-                    printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                    printf("\n\t[!] Error while writing to pipe '%s' [func: frontendComms | command: list]\n", FRONTEND_FINAL_FIFO);
                     quit(NULL);
                 }
                 close(fd);
@@ -942,13 +941,13 @@ void *frontendComms(void *structThreadCredentials)
                         int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
                         if (fd == -1)
                         {
-                            printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                            printf("\n\t[!] Error while opening pipe '%s' [func: frontendComms | command: licat]\n", FRONTEND_FINAL_FIFO);
                             quit(NULL);
                         }
                         int size2 = write(fd, item_ptr, sizeof(Item));
                         if (size2 == -1)
                         {
-                            printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                            printf("\n\t[!] Error while writing to pipe '%s' [func: frontendComms | command: licat]\n", FRONTEND_FINAL_FIFO);
                             quit(NULL);
                         }
                         close(fd);
@@ -961,13 +960,13 @@ void *frontendComms(void *structThreadCredentials)
                 int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
                 if (fd == -1)
                 {
-                    printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                    printf("\n\t[!] Error while opening pipe '%s' [func: frontendComms | command: licat]\n", FRONTEND_FINAL_FIFO);
                     quit(NULL);
                 }
                 int size2 = write(fd, &end, sizeof(Item));
                 if (size2 == -1)
                 {
-                    printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                    printf("\n\t[!] Error while writing to pipe '%s' [func: frontendComms | command: licat]\n", FRONTEND_FINAL_FIFO);
                     quit(NULL);
                 }
                 close(fd);
@@ -983,13 +982,13 @@ void *frontendComms(void *structThreadCredentials)
                         int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
                         if (fd == -1)
                         {
-                            printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                            printf("\n\t[!] Error while opening pipe '%s' [func: frontendComms | command: lisel]\n", FRONTEND_FINAL_FIFO);
                             quit(NULL);
                         }
                         int size2 = write(fd, item_ptr, sizeof(Item));
                         if (size2 == -1)
                         {
-                            printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                            printf("\n\t[!] Error while writing to pipe '%s' [func: frontendComms | command: lisel]\n", FRONTEND_FINAL_FIFO);
                             quit(NULL);
                         }
                         close(fd);
@@ -1002,13 +1001,13 @@ void *frontendComms(void *structThreadCredentials)
                 int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
                 if (fd == -1)
                 {
-                    printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                    printf("\n\t[!] Error while opening pipe '%s' [func: frontendComms | command: lisel]\n", FRONTEND_FINAL_FIFO);
                     quit(NULL);
                 }
                 int size2 = write(fd, &end, sizeof(Item));
                 if (size2 == -1)
                 {
-                    printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                    printf("\n\t[!] Error while writing to pipe '%s' [func: frontendComms | command: lisel]\n", FRONTEND_FINAL_FIFO);
                     quit(NULL);
                 }
                 close(fd);
@@ -1024,13 +1023,13 @@ void *frontendComms(void *structThreadCredentials)
                         int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
                         if (fd == -1)
                         {
-                            printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                            printf("\n\t[!] Error while opening pipe '%s' [func: frontendComms | command: lival]\n", FRONTEND_FINAL_FIFO);
                             quit(NULL);
                         }
                         int size2 = write(fd, item_ptr, sizeof(Item));
                         if (size2 == -1)
                         {
-                            printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                            printf("\n\t[!] Error while writing to pipe '%s' [func: frontendComms | command: lival]\n", FRONTEND_FINAL_FIFO);
                             quit(NULL);
                         }
                         close(fd);
@@ -1043,13 +1042,13 @@ void *frontendComms(void *structThreadCredentials)
                 int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
                 if (fd == -1)
                 {
-                    printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                    printf("\n\t[!] Error while opening pipe '%s' [func: frontendComms | command: lival]\n", FRONTEND_FINAL_FIFO);
                     quit(NULL);
                 }
                 int size2 = write(fd, &end, sizeof(Item));
                 if (size2 == -1)
                 {
-                    printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                    printf("\n\t[!] Error while writing to pipe '%s' [func: frontendComms | command: lival]\n", FRONTEND_FINAL_FIFO);
                     quit(NULL);
                 }
                 close(fd);
@@ -1069,13 +1068,13 @@ void *frontendComms(void *structThreadCredentials)
                         int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
                         if (fd == -1)
                         {
-                            printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                            printf("\n\t[!] Error while opening pipe '%s' [func: frontendComms | command: litime]\n", FRONTEND_FINAL_FIFO);
                             quit(NULL);
                         }
                         int size2 = write(fd, item_ptr, sizeof(Item));
                         if (size2 == -1)
                         {
-                            printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                            printf("\n\t[!] Error while writing to pipe '%s' [func: frontendComms | command: litime]\n", FRONTEND_FINAL_FIFO);
                             quit(NULL);
                         }
                         close(fd);
@@ -1088,13 +1087,13 @@ void *frontendComms(void *structThreadCredentials)
                 int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
                 if (fd == -1)
                 {
-                    printf("\n\t[!] Error while opening pipe FRONTEND_FIFO\n");
+                    printf("\n\t[!] Error while opening pipe '%s' [func: frontendComms | command: litime]\n", FRONTEND_FINAL_FIFO);
                     quit(NULL);
                 }
                 int size2 = write(fd, &end, sizeof(Item));
                 if (size2 == -1)
                 {
-                    printf("\n\t[!] Error while writing to pipe FRONTEND_FIFO\n");
+                    printf("\n\t[!] Error while writing to pipe '%s' [func: frontendComms | command: litime]\n", FRONTEND_FINAL_FIFO);
                     quit(NULL);
                 }
                 close(fd);
@@ -1139,7 +1138,7 @@ void *verifyCredentials(void *structThreadCredentials)
     int fd = open(BACKEND_FIFO, O_RDONLY);
     if (fd == -1)
     {
-        printf("\n\t[!] Error while opening pipe BACKEND_FIFO\n");
+        printf("\n\t[!] Error while opening pipe '%s' [func: verifyCredentials]\n", BACKEND_FIFO);
         quit(NULL);
     }
 
@@ -1158,7 +1157,7 @@ void *verifyCredentials(void *structThreadCredentials)
                 int fd2 = open(FRONTEND_FINAL_FIFO, O_WRONLY);
                 if (fd2 == -1)
                 {
-                    printf("\n\t[!] Error while opening pipe\n");
+                    printf("\n\t[!] Error while opening pipe '%s' [func: verifyCredentials]\n", FRONTEND_FINAL_FIFO);
                     quit(NULL);
                 }
 
@@ -1203,7 +1202,7 @@ void *verifyCredentials(void *structThreadCredentials)
                 int size2 = write(fd2, &result, sizeof(result));
                 if (size2 == -1)
                 {
-                    printf("\n\t[!] Error while writing to pipe\n");
+                    printf("\n\t[!] Error while writing to pipe '%s' [func: verifyCredentials]\n", FRONTEND_FINAL_FIFO);
                     quit(NULL);
                 }
                 close(fd2);
@@ -1215,14 +1214,14 @@ void *verifyCredentials(void *structThreadCredentials)
                 int fd2 = open(FRONTEND_FINAL_FIFO, O_WRONLY);
                 if (fd2 == -1)
                 {
-                    printf("\n\t[!] Error while opening pipe\n");
+                    printf("\n\t[!] Error while opening pipe '%s' [func: verifyCredentials]\n", FRONTEND_FINAL_FIFO);
                     quit(NULL);
                 }
                 int result = -2;
                 int size2 = write(fd2, &result, sizeof(result));
                 if (size2 == -1)
                 {
-                    printf("\n\t[!] Error while writing to pipe\n");
+                    printf("\n\t[!] Error while writing to pipe '%s' [func: verifyCredentials]\n", FRONTEND_FINAL_FIFO);
                     quit(NULL);
                 }
                 close(fd2);
@@ -1280,7 +1279,7 @@ void *itemActions(void *structThreadCredentials)
                                 int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
                                 if (fd == -1)
                                 {
-                                    printf("\n\t[!] Error while opening pipe\n");
+                                    printf("\n\t[!] Error while opening pipe '%s' [func: itemActions]\n", FRONTEND_FINAL_FIFO);
                                     quit(NULL);
                                 }
                                 Comms comms;
@@ -1290,7 +1289,7 @@ void *itemActions(void *structThreadCredentials)
                                 int size = write(fd, &comms, sizeof(comms));
                                 if (size == -1)
                                 {
-                                    printf("\n\t[!] Error while writing to pipe\n");
+                                    printf("\n\t[!] Error while writing to pipe '%s' [func: itemActions]\n", FRONTEND_FINAL_FIFO);
                                     quit(NULL);
                                 }
                                 close(fd);
@@ -1315,8 +1314,8 @@ void *verifyUserAlive(void *structThreadCredentials)
     int fd = open(ALIVE_FIFO, O_RDWR);
     if (fd == -1)
     {
-        printf("\nError opening reading FIFO");
-        return NULL;
+        printf("\n\t[!] Error while opening pipe '%s' [func: veriyUserAlive]\n", ALIVE_FIFO);
+        quit(NULL);
     }
     while (1)
     {
@@ -1456,12 +1455,12 @@ int main(int argc, char **argv)
 
     if (pthread_create(&verifyAlive, NULL, verifyUserAlive, &structThreadCredentials) != 0)
     {
-        perror("Error creating thread");
+        perror("Error creating thread 'verifyAlive'");
     }
 
     if (pthread_create(&removeUser, NULL, removeUserNotAlive, &structThreadCredentials) != 0)
     {
-        perror("Error creating thread");
+        perror("Error creating thread 'removeUser'");
     }
 
     // Signal handler
