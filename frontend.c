@@ -482,7 +482,7 @@ int backendOn()
     }
     return 0;
 }
-void receiveSignal(int n)
+void receiveSignal()
 {
     printf("\n\n[!] Backend program is closing...\n");
     sleep(1);
