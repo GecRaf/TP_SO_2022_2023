@@ -3,8 +3,6 @@
 
 // Notes:
 // 1. 'List' command keeps failing sometimes, randomly
-// 2. quit() function should not exit(EXIT_SUCCESS), but rather kill all threads and processes and continue on main
-// 3. Review all structs and remove unnecessary variables
 
 int pipeBP[2], pipePB[2];
 int threadCounter = 0;
@@ -142,14 +140,17 @@ void kick(char username[], void *user)
 void *promotorComms(void *prom)
 {
     Promotor *promotor = (Promotor *)prom;
-
     // Estrutura esta a chegar vazia
+    printf("\n\t[~] Promotor '%s' started\n", promotor->path);
+
     if (strcmp(promotor->path, "") == 0)
     {
         pthread_exit((void *)NULL);
     }
-    
-    printf("\n\t[~] Promotor '%s' started\n", promotor->path);
+
+    char *promotorsFile = getenv("FPROMOTORS");
+    char *maxPromotorsChar = getenv("MAX_PROMOTORS");
+    int maxPromotors = atoi(maxPromotorsChar);
 
     char *promotorsExecutablesPath = promotor->path;
 
@@ -175,9 +176,9 @@ void *promotorComms(void *prom)
         promotor->PID = pid;
         promotorPIDArray[promotorPIDArrayIndex] = pid;
         promotorPIDArrayIndex++;
-        //printf("\n\t[~] Promotor '%s' PID '%5d'\n", promotorsExecutablesPath, pid); //Debug
+        //printf("\n\t[~] Promotor '%s' PID '%5d'\n", promotorsExecutablesPath, pid);
         int flag = 1;
-        while (flag)
+        while (flag) // Review
         {
             close(pipeBP[0]); // Close pipeBP[0]
             close(pipePB[1]); // Close pipePB[1]
@@ -206,6 +207,7 @@ void *promotorComms(void *prom)
                     token = strtok(NULL, " ");
                     ++i;
                 }
+                // printf("\n\nTesting struct: %s %d %d\n\n", pr->category, pr->discount, pr->duration); // Testing
             }
             if (tam == -1)
             {
@@ -280,6 +282,27 @@ void launchPromotersThreads(void *structThreadCredentials, pthread_t *threadProm
         threadCounter--;
     }
 }
+void debugPromotores(void *structThreadCredentials)
+{
+    // Print all existing promotors and details
+    StructThreadCredentials *mainStruct = (StructThreadCredentials *)structThreadCredentials;
+    Promotor *prt = (Promotor *)mainStruct->promotor;
+    int maxPromotors = atoi(getenv("MAX_PROMOTORS"));
+
+    for (int i = 0; i < maxPromotors; i++)
+    {
+        if (strcmp(prt->path, "") != 0)
+        {
+            printf("\n[~] Promotor %d: %s\n", i, prt->path);
+            printf("\t[~] Category: %s\n", prt->category);
+            printf("\t[~] Discount: %d\n", prt->discount);
+            printf("\t[~] Duration: %d\n", prt->duration);
+            printf("\t[~] Active: %d\n", prt->active);
+            printf("\t[~] Thread ID: %d\n", prt->threadID);
+        }
+        prt = prt->next;
+    }
+}
 void prom(void *promotor)
 {
     // Show all the active promoters
@@ -299,7 +322,7 @@ void reprom(void *structThreadCredentials, pthread_t *threadPromotor)
     // Sometimes it's working, sometimes it's not
     StructThreadCredentials *mainStruct = (StructThreadCredentials *)structThreadCredentials;
     Promotor *prt = (Promotor *)mainStruct->promotor;
-    int maxPromotors = mainStruct->backend->maxPromoters;
+    int maxPromotors = atoi(getenv("MAX_PROMOTORS"));
     char *promotersFile = getenv("FPROMOTERS");
 
     FILE *f;
@@ -368,7 +391,6 @@ void reprom(void *structThreadCredentials, pthread_t *threadPromotor)
             kill(prt->PID, SIGUSR1);
             waitpid(prt->PID, NULL, 0);
             printf("\n\t\t[+] Promotor thread killed '%s'\n\n", prt->path);
-            threadCounter--;
             prt->active = 0;
         }
         prt = prt->next;
@@ -400,6 +422,7 @@ void cancelPromotor(void *structThreadCredentials, pthread_t *threadPromotor, ch
     {
         if (strcmp(prt->path, path) == 0)
         {
+            // TODO: Kill thread without crashing the program
             kill(prt->PID, SIGUSR1);
             waitpid(prt->PID, NULL, 0);
             printf("\n\t[+] Promotor thread killed '%s'\n\n", prt->path);
@@ -1039,7 +1062,7 @@ void *frontendComms(void *structThreadCredentials)
                     struct tm *actual_time_tm = localtime(&actual_time);
                     int actual_time_seconds = actual_time_tm->tm_hour * 3600 + actual_time_tm->tm_min * 60 + actual_time_tm->tm_sec;
 
-                    if (item_ptr->id != 0 && (actual_time_seconds + item_ptr->duration) <= (actual_time_seconds + comms.balance) && item_ptr->duration > 0)
+                    if (item_ptr->id != 0 && (actual_time_seconds + item_ptr->duration) <= (comms.balance + actual_time_seconds) && item_ptr->duration > 0)
                     {
                         sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, comms.PID);
                         int fd = open(FRONTEND_FINAL_FIFO, O_WRONLY);
@@ -1088,7 +1111,7 @@ void *removeUserNotAlive(void *structThreadCredentials)
 
     while (1)
     {
-        sleep(heartbeat+10); // This was working with 10 seconds here and 3 seconds in the frontend [IN CASE OF FAILING, TRY TO CHANGE THIS]
+        sleep(heartbeat+10); // This was working with 10 seconds here and 3 seconsds in the frontend [IN CASE OF FAILING, TRY TO CHANGE THIS]
         User *user_ptr = (User *)structThreadCredentials_ptr->user;
         while (user_ptr != NULL)
         {
@@ -1124,6 +1147,7 @@ void *verifyCredentials(void *structThreadCredentials)
         User *user_ptr = (User *)structThreadCredentials_ptr->user;
         memset(&user, 0, sizeof(user));
         int size = read(fd, &user, sizeof(user));
+        // pthread_mutex_lock(backend_ptr->mutex); // Review this later
         if (size > 0)
         {
             if (backend_ptr->connectedClients < maxUsers)
@@ -1154,11 +1178,9 @@ void *verifyCredentials(void *structThreadCredentials)
                         {
                             result = 1;
                             printf("\n\n[~] User %s logged in\n", user_ptr->username);
-                            pthread_mutex_lock(backend_ptr->mutex);
                             user_ptr->heartbeating = 1;
                             user_ptr->loggedIn = 1;
                             user_ptr->PID = user.PID;
-                            pthread_mutex_unlock(backend_ptr->mutex);
                             // Store PID in the global variable
                             frontendPIDArray[frontendPIDArrayIndex] = user.PID;
                             frontendPIDArrayIndex++;
@@ -1230,6 +1252,7 @@ void *itemActions(void *structThreadCredentials)
     {
         item_ptr = (Item *)structThreadCredentials_ptr->item;
         sleep(1);
+        pthread_mutex_lock(backend_ptr->mutex);
         while (item_ptr != NULL)
         {
             // Check if the struct name is not empty
@@ -1247,7 +1270,6 @@ void *itemActions(void *structThreadCredentials)
                     if (item_ptr->duration == -1)
                     {
                         printf("\n\n\t[~] Item '%s' with ID '%d' timed out\n\n", item_ptr->name, item_ptr->id);
-                        pthread_mutex_lock(backend_ptr->mutex);
                         while (user_ptr != NULL)
                         {
                             if (user_ptr->loggedIn == 1)
@@ -1274,12 +1296,12 @@ void *itemActions(void *structThreadCredentials)
                             }
                             user_ptr = user_ptr->next;
                         }
-                        pthread_mutex_unlock(backend_ptr->mutex);
                     }
                 }
             }
             item_ptr = item_ptr->next;
         }
+        pthread_mutex_unlock(backend_ptr->mutex);
     }
     pthread_exit((void *)NULL);
 }
@@ -1380,7 +1402,6 @@ int main(int argc, char **argv)
         printf("\n[!] Error while creating the backendFrontend FIFO\n");
         return 0;
     }
-    
     if (mkfifo(ALIVE_FIFO, 0666) == -1)
     {
         printf("\n[!] Error while creating the alive FIFO\n");
