@@ -78,6 +78,7 @@ typedef struct promotor{
     int active;
     int threadID;
     int PID;
+    int listed;
     struct promotor *next;
 }Promotor;
 

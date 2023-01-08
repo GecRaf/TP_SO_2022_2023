@@ -3,6 +3,8 @@
 // Notes:
 // 1. Change all exit(EXIT_FAILURE) to quit()
 
+int mustContinue = 1;
+
 int sell(char itemName[], char category[], int basePrice, int buyNowPrice, int duration, char sellerUsername[])
 {
     Item item;
@@ -36,16 +38,17 @@ int sell(char itemName[], char category[], int basePrice, int buyNowPrice, int d
         printf("\n\t[!] Error while opening pipe '%s' [func: sell]\n", FRONTEND_FINAL_FIFO);
         exit(EXIT_FAILURE);
     }
-    size = read(fd, &item, sizeof(Item));
-    if (size == -1)
+    int id = 0;
+    int size2 = read(fd, &id, sizeof(int));
+    if (size2 == -1)
     {
         printf("\n\t[!] Error while reading from pipe '%s' [func: sell]\n", FRONTEND_FINAL_FIFO);
         exit(EXIT_FAILURE);
     }
     close(fd);
 
-    if (item.id != -1)
-        return item.id; // In case of success
+    if (id != -1)
+        return id; // In case of success
     else
         return -1; // In case of insuccess
 }
@@ -128,16 +131,14 @@ void quit()
     close(fd);
 
     printf("\n[!] Exiting...\n\n");
-    unlink(FRONTEND_FINAL_FIFO);
+    mustContinue = 0;
     sleep(1);
-    exit(EXIT_SUCCESS);
 }
 void quit2()
 {
     printf("\n[!] Exiting...\n\n");
-    unlink(FRONTEND_FINAL_FIFO);
+    mustContinue = 0;
     sleep(1);
-    exit(EXIT_SUCCESS);
 }
 void clear()
 {
@@ -163,7 +164,7 @@ void *frontendCommandReader(void *user_ptr)
 
     printf("\nfrontendCommandReader @ type help for command list\n\n");
 
-    while (1)
+    while (mustContinue)
     {
         *arg = 0;
         *cmd = 0;
@@ -495,16 +496,18 @@ void *receiveMessages(void *user_ptr)
 {
     User *user = (User *)user_ptr;
     Comms comms;
+    Item item;
+    Promotor promotor;
     // Assure that all frontends receive the message at the same time
     sprintf(FRONTEND_FINAL_FIFO, FRONTEND_FIFO, user->PID);
-    int comms_fd = open(FRONTEND_FINAL_FIFO, O_RDONLY);
+    int comms_fd = open(FRONTEND_FINAL_FIFO, O_RDWR);
     if (comms_fd == -1)
     {
         printf("\n\t[!] Error while opening pipe '%s' [func: receiveMessages]\n", FRONTEND_FINAL_FIFO);
         quit();
     }
 
-    while (1)
+    while (mustContinue)
     {
         int size = read(comms_fd, &comms, sizeof(comms));
         if (size == -1)
@@ -518,9 +521,43 @@ void *receiveMessages(void *user_ptr)
             {
                 printf("\n\n\t[~] Item '%s' with ID '%d' timed out\n", comms.username, comms.buyID);
             }
-            else if (strcmp(comms.message, "sold") == 0)
+            else if (strcmp(comms.message, "Bought") == 0)
             {
-                
+                // Read item struct
+                int size2 = read(comms_fd, &item, sizeof(item));
+                if (size2 == -1)
+                {
+                    printf("\n\t[!] Error while reading from pipe '%s' [func: receiveMessages]\n", FRONTEND_FINAL_FIFO);
+                    quit();
+                }
+                // printf with Item ID, Item Name, Item Category, Item Highest Bid, Item Seller Username
+                printf("\n\n\t[~] Item '%s' with ID '%d' from category '%s' was bought by '%s' for '%d' euros\n", item.name, item.id, item.category, item.sellingUser, item.highestBid);
+            }
+            else if (strcmp(comms.message, "NewItem") == 0)
+            {
+                // Read item struct
+                int size2 = read(comms_fd, &item, sizeof(item));
+                if (size2 == -1)
+                {
+                    printf("\n\t[!] Error while reading from pipe '%s' [func: receiveMessages]\n", FRONTEND_FINAL_FIFO);
+                    quit();
+                }
+                // printf with Item ID, Item Name, Item Category, Item Highest Bid, Item Seller Username
+                printf("\n\n\t[~] Item '%s' with ID '%d' from category '%s' was listed by '%s' for '%d' euros\n", item.name, item.id, item.category, item.sellingUser, item.basePrice);
+            }
+            else if (strcmp(comms.message, "Promotor") == 0)
+            {
+                // Read item struct
+                int size2 = read(comms_fd, &promotor, sizeof(promotor));
+                if (size2 == -1)
+                {
+                    printf("\n\t[!] Error while reading from pipe '%s' [func: receiveMessages]\n", FRONTEND_FINAL_FIFO);
+                    quit();
+                }
+                if(promotor.listed == 1)
+                    printf("\n\n\t[~] Category '%s' is on promotion for '%d' seconds with '%d' percent discount\n", promotor.category, promotor.duration, promotor.discount);
+                else if(promotor.listed == 2)
+                    printf("\n\n\t[~] Category '%s' is no longer on promotion\n", promotor.category);
             }
         }
     }
@@ -547,11 +584,12 @@ void *threadAlive(void *user_ptr)
 {
     int heartbeat = atoi(getenv("HEARTBEAT"));
     
-    while(1)
+    while(mustContinue)
     {
         sleep(heartbeat);
         imAlive();
     }
+    pthread_exit((void *)NULL);
 }
 
 int main(int argc, char **argv)
@@ -567,6 +605,7 @@ int main(int argc, char **argv)
     pthread_t threadBackendComms;
     pthread_t threadReceiveMessages;
     pthread_t threadImAlive;
+    pthread_t threads[3] = {threadBackendComms, threadReceiveMessages, threadImAlive};
 
     if (backendOn())
     {
@@ -669,9 +708,19 @@ int main(int argc, char **argv)
         perror("Error creating thread 'threadImAlive'");
     }
 
-    pthread_join(threadImAlive, NULL);
-    pthread_join(threadBackendComms, NULL);
-    pthread_join(threadReceiveMessages, NULL);
+    // Wait while mustContinue is false
+    while (mustContinue)
+    {
+        sleep(1);
+    }
+
+    // Wait for all threads to finish
+    for (int i = 0; i < 3; i++)
+    {
+        pthread_join(threads[i], NULL);
+    }
+
+    unlink(FRONTEND_FINAL_FIFO);
 
     return 0;
 }

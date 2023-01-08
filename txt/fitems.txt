@@ -1,9 +1,9 @@
 1 sapatilhas desporto 50 30 100
 2 computador tecnologia 100 95 200
-3 martelo construcao 10 20 200
-4 telemovel tecnologia 50 30 100
-5 tijolo construcao 10 20 200
-6 tinta construcao 10 20 200
-7 impressora tecnologia 50 30 100
-8 cadeira escritorio 50 30 100
-9 mesa escritorio 50 30 100
+3 martelo construcao 10 20 190
+4 telemovel tecnologia 50 30 90
+5 tijolo construcao 10 20 95
+6 tinta construcao 10 20 20
+7 impressora tecnologia 50 30 43
+8 cadeira escritorio 50 30 60
+9 mesa escritorio 50 30 400
