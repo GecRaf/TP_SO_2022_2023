@@ -3,6 +3,8 @@
 
 // Notes:
 // 1. 'List' command keeps failing sometimes, randomly
+// 2. quit() function should not exit(EXIT_SUCCESS), but rather kill all threads and processes and continue on main
+// 3. Review all structs and remove unnecessary variables
 
 int pipeBP[2], pipePB[2];
 int threadCounter = 0;
@@ -322,7 +324,7 @@ void reprom(void *structThreadCredentials, pthread_t *threadPromotor)
     // Sometimes it's working, sometimes it's not
     StructThreadCredentials *mainStruct = (StructThreadCredentials *)structThreadCredentials;
     Promotor *prt = (Promotor *)mainStruct->promotor;
-    int maxPromotors = atoi(getenv("MAX_PROMOTORS"));
+    int maxPromotors = mainStruct->backend->maxPromotors;
     char *promotersFile = getenv("FPROMOTERS");
 
     FILE *f;
@@ -422,7 +424,6 @@ void cancelPromotor(void *structThreadCredentials, pthread_t *threadPromotor, ch
     {
         if (strcmp(prt->path, path) == 0)
         {
-            // TODO: Kill thread without crashing the program
             kill(prt->PID, SIGUSR1);
             waitpid(prt->PID, NULL, 0);
             printf("\n\t[+] Promotor thread killed '%s'\n\n", prt->path);

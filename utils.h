@@ -30,7 +30,6 @@ typedef struct structThreadCredentials{
 
 typedef struct backend{
     int connectedClients;
-    int removeUsersID;
     pthread_mutex_t *mutex;
     int maxPromoters;
     int maxItems;
